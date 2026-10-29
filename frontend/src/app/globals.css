@@ -1,0 +1,288 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Clair : le papier crème et le bleu du « Défi ». Sombre : la nuit violette du cockpit. */
+:root {
+  color-scheme: light;
+  --bg: #f6f1e8;
+  --surface: #fffdf8;
+  --surface-2: #f1ebe0;
+  --border: #e6ddcd;
+  --text: #13203b;
+  --muted: #667085;
+  --primary: #2156e0;
+  --primary-strong: #1846c4;
+  --primary-soft: #e4ecff;
+  --on-primary: #ffffff;
+  --success: #16884a;
+  --success-soft: #e2f4e8;
+  --warning: #b7791f;
+  --warning-soft: #fdf1dc;
+  --danger: #c2412d;
+  --danger-soft: #fde6e1;
+  --accent: #f0694a;
+  --accent-soft: #fde4dc;
+  --trophy: #d99a0b;
+  --code-bg: #0f1a33;
+  --code-line: #1b2a4f;
+  --code-text: #d7def0;
+  --hero-from: #1d3fb8;
+  --hero-to: #5a3fd6;
+  --menthe: #0b8a69;
+  --rose: #c1307f;
+  --lavande: #5a46d8;
+  --shadow: 0 1px 2px rgb(19 32 59 / 0.05), 0 8px 24px -12px rgb(19 32 59 / 0.18);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0a0d24;
+  --surface: #11153a;
+  --surface-2: #171c48;
+  --border: #252b5e;
+  --text: #eef0ff;
+  --muted: #9aa1cc;
+  --primary: #6c5cfc;
+  --primary-strong: #8577ff;
+  --primary-soft: #231f5e;
+  --on-primary: #ffffff;
+  --success: #2fca6f;
+  --success-soft: #133a2d;
+  --warning: #f5b544;
+  --warning-soft: #3a2e14;
+  --danger: #ff7a66;
+  --danger-soft: #3d1a1f;
+  --accent: #ff8a65;
+  --accent-soft: #3b2032;
+  --trophy: #f7c948;
+  --code-bg: #080b1e;
+  --code-line: #1c2150;
+  --code-text: #d9dcf7;
+  --hero-from: #2a1a8f;
+  --hero-to: #6b2fd0;
+  --menthe: #3ddbb0;
+  --rose: #f062b8;
+  --lavande: #b4a3ff;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px -16px rgb(0 0 0 / 0.6);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-soft: var(--primary-soft);
+  --color-on-primary: var(--on-primary);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-trophy: var(--trophy);
+  --color-code-bg: var(--code-bg);
+  --color-code-line: var(--code-line);
+  --color-code-text: var(--code-text);
+  --color-menthe: var(--menthe);
+  --color-rose: var(--rose);
+  --color-lavande: var(--lavande);
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-dm-serif), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-hand: var(--font-caveat), "Comic Sans MS", cursive;
+  --shadow-card: var(--shadow);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.hero {
+  background:
+    radial-gradient(120% 140% at 85% 10%, rgb(255 255 255 / 0.14), transparent 50%),
+    linear-gradient(120deg, var(--hero-from), var(--hero-to));
+}
+
+.grille-papier {
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-position: -1px -1px;
+}
+
+/* DM Serif Display n'a qu'une graisse : pas de faux gras calculé par le navigateur. */
+.font-display {
+  font-synthesis-weight: none;
+}
+
+/* Accueil : la nuit du laboratoire, ses lueurs et ses trames de points. */
+.fond-labo {
+  background:
+    radial-gradient(56rem 36rem at 62% -8%, color-mix(in oklab, var(--primary) 24%, transparent), transparent 70%),
+    radial-gradient(38rem 30rem at -8% 38%, color-mix(in oklab, var(--primary) 14%, transparent), transparent 70%),
+    radial-gradient(34rem 26rem at 104% 62%, color-mix(in oklab, var(--rose) 11%, transparent), transparent 70%),
+    var(--bg);
+}
+
+.points-deco {
+  background-image: radial-gradient(color-mix(in oklab, var(--muted) 50%, transparent) 1.4px, transparent 1.7px);
+  background-size: 18px 18px;
+}
+
+.texte-degrade {
+  background: linear-gradient(100deg, var(--lavande), var(--primary) 55%, color-mix(in oklab, var(--primary) 60%, var(--rose)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bouton-lumineux {
+  background: linear-gradient(100deg, var(--primary), color-mix(in oklab, var(--primary) 62%, var(--rose)));
+  box-shadow: 0 10px 30px -10px color-mix(in oklab, var(--primary) 80%, transparent);
+}
+
+/* Flèches explicatives : tracées au chargement, retracées quand on les active.
+   Un tiret de 64 unités couvre chaque tracé (62 au plus) : garder les nouveaux tracés sous cette longueur. */
+.fleche {
+  color: var(--fleche);
+}
+.fleche-trait,
+.fleche-pointe {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke-width 0.2s;
+}
+.fleche-trait {
+  stroke-dasharray: 64;
+  stroke-dashoffset: 0;
+  animation: tracer 1.1s ease-out both;
+}
+.fleche-pointe {
+  animation: apparaitre 1.1s ease-out both;
+}
+.fleche[data-actif] svg {
+  filter: drop-shadow(0 0 6px currentColor);
+}
+.fleche[data-actif] .fleche-trait {
+  stroke-width: 2.6;
+  animation: retracer 0.7s ease-out both;
+}
+.fleche[data-actif] .fleche-pointe {
+  stroke-width: 2.6;
+  animation: reapparaitre 0.7s ease-out both;
+}
+@keyframes tracer { from { stroke-dashoffset: 64; } to { stroke-dashoffset: 0; } }
+@keyframes retracer { from { stroke-dashoffset: 64; } to { stroke-dashoffset: 0; } }
+@keyframes apparaitre { 0%, 75% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes reapparaitre { 0%, 75% { opacity: 0; } 100% { opacity: 1; } }
+
+/* La destination d'une flèche active s'éclaire. */
+.cible {
+  transition: box-shadow 0.3s ease-out;
+}
+.cible[data-cible-active] {
+  box-shadow: 0 0 0 2px var(--rose), 0 0 40px -6px var(--rose);
+}
+
+/* Démonstration : la flèche que l'exécution vient de franchir glisse et s'allume. */
+@keyframes flux {
+  from { transform: translateX(-4px); opacity: 0.3; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.fleche-flux { animation: flux 0.45s ease-out; }
+
+/* Chaque nouvel algorithme se dévoile : lignes une à une, titre qui surgit, résultat caché qui pulse. */
+@keyframes ligne-apparait {
+  from { opacity: 0; transform: translateX(-10px); filter: blur(3px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+.ligne-apparait { animation: ligne-apparait 0.4s ease-out both; }
+@keyframes revele {
+  0% { opacity: 0; transform: scale(0.8); filter: blur(4px); }
+  60% { opacity: 1; transform: scale(1.08); filter: none; }
+  100% { transform: scale(1); }
+}
+.revele { animation: revele 0.5s ease-out both; }
+@keyframes mystere {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.9; }
+}
+.mystere { animation: mystere 1.4s ease-in-out infinite; }
+
+/* Test de niveau : chaque scène arrive en glissant, l'anneau de boucle fait un tour à chaque passage. */
+@keyframes scene-entree {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+.scene-entree { animation: scene-entree 0.5s ease-out both; }
+@keyframes anneau-tourne {
+  from { transform: rotate(-90deg); }
+  to { transform: rotate(0deg); }
+}
+.anneau-tourne { animation: anneau-tourne 0.6s ease-out; transform-origin: center; }
+
+/* Icônes dessinées du test : le trait se trace, l'étincelle scintille. */
+.dessin { stroke-dasharray: 160; stroke-dashoffset: 0; animation: dessin 0.9s ease-out both; }
+.dessin-tard { animation-delay: 0.45s; }
+@keyframes dessin { from { stroke-dashoffset: 160; } to { stroke-dashoffset: 0; } }
+@keyframes scintille {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+.scintille { animation: scintille 1.6s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes tourne-lent { to { transform: rotate(360deg); } }
+.tourne-lent { animation: tourne-lent 9s linear infinite; transform-origin: center; transform-box: fill-box; }
+
+/* Lecture guidée : le code attend sous un brouillard, la ligne à lire brille. */
+.brouillard { filter: blur(5px); opacity: 0.35; }
+.brouillard-leger { filter: blur(2.5px); opacity: 0.7; }
+@keyframes appel {
+  0%, 100% { box-shadow: inset 3px 0 0 var(--rose), 0 0 0 0 transparent; }
+  50% { box-shadow: inset 3px 0 0 var(--rose), 0 0 22px -6px var(--rose); }
+}
+.ligne-a-lire { animation: appel 1.4s ease-in-out infinite; }
+@keyframes eclat {
+  0% { opacity: 0; transform: scale(0.4) translate(0, 0); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1) translate(var(--dx), var(--dy)); }
+}
+.eclat { animation: eclat 0.9s ease-out both; }
+@keyframes bouton-pret {
+  0%, 100% { box-shadow: 0 10px 30px -10px color-mix(in oklab, var(--primary) 80%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in oklab, var(--primary) 25%, transparent), 0 14px 40px -8px var(--primary); }
+}
+.bouton-pret { animation: bouton-pret 1.6s ease-in-out infinite; }
+
+@keyframes pulse-doux {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+.pulse-doux { animation: pulse-doux 0.6s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
