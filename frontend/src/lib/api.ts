@@ -55,6 +55,19 @@ export interface Cockpit {
   recompenses: { notion: Notion; titre: string; langages: Partial<Record<Langage, string>> }[];
 }
 
+/** Un cœur de la bibliothèque ; « principal » : celui que montre le cockpit pour sa notion. */
+export interface ExerciceBibliotheque {
+  id: string;
+  notion: Notion;
+  titre: string;
+  enonce: string;
+  ordre: number;
+  principal: boolean;
+  accessible: boolean;
+  tentative_en_cours: string | null;
+  reussi: boolean;
+}
+
 export type Langage = "python" | "javascript" | "java" | "c";
 
 export interface Moment {
@@ -202,6 +215,7 @@ export const api = {
   profils: (ids: string[]) => appel<Profil[]>(`profil?ids=${ids.join(",")}`),
   creerProfil: (pseudo: string) => appel<Profil>("profil", { method: "POST", body: json({ pseudo }) }),
   cockpit: (profilId: string) => appel<Cockpit>(`cockpit?profil_id=${profilId}`),
+  bibliotheque: (profilId: string) => appel<{ exercices: ExerciceBibliotheque[] }>(`bibliotheque?profil_id=${profilId}`),
   ouvrirTentative: (profilId: string, exerciceId: string) =>
     appel<Progression>("tentative", {
       method: "POST",

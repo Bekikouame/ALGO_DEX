@@ -113,6 +113,21 @@ class CockpitView(VueApprenant):
         return Response(regles.cockpit(profil))
 
 
+class BibliothequeView(VueApprenant):
+    @extend_schema(
+        tags=["cockpit"],
+        summary="Bibliothèque d'exercices",
+        description="Tous les cœurs actifs, par notion puis par ordre, avec leur accès et leur état pour ce profil. "
+                    "Jamais la solution de référence.",
+        parameters=[OpenApiParameter("profil_id", OpenApiTypes.UUID, required=True)],
+        responses=OpenApiTypes.OBJECT,
+    )
+    def get(self, request):
+        donnees = _valider(ProfilRefSerializer, request.query_params)
+        profil = get_object_or_404(Profil, pk=donnees["profil_id"])
+        return Response(regles.bibliotheque(profil))
+
+
 # --------------------------------------------------------------------------
 # /api/executer
 # --------------------------------------------------------------------------

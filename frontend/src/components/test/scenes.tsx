@@ -283,7 +283,7 @@ export function Constellation({ plan, courant, grande = false }: { plan: PlanCas
   const arretIndex = plan.arret ? plan.notions.findIndex((n) => n.notion === plan.arret) : -1;
   const taille = grande ? "h-5 w-5" : "h-3 w-3";
   return (
-    <ol className={`flex items-start ${grande ? "gap-3 sm:gap-5" : "gap-2"}`} aria-label="Progression du test de niveau">
+    <ol className={`flex items-start ${grande ? "flex-wrap justify-center gap-x-3 gap-y-5 sm:gap-x-5" : "gap-2"}`} aria-label="Progression du test de niveau">
       {plan.notions.map((n, i) => {
         const horsJeu = arretIndex >= 0 && i > arretIndex;
         return (

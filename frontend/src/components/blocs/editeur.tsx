@@ -1,137 +1,330 @@
 "use client";
 
 import { ArrowDown, ArrowUp, Delete, Lock, Plus, Trash2, X } from "lucide-react";
-import { createContext, useContext, useState, type ReactNode } from "react";
-import {
-  blocVide,
-  depuisJetons,
-  enJetons,
-  LIBELLES_BLOC,
-  modifierSequence,
-  type Bloc,
-  type Chemin,
-  type TypeBloc,
-} from "@/lib/blocs";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { colorer } from "@/components/code/colorer";
+import { blocVide, depuisJetons, enJetons, modifierSequence, type Bloc, type Chemin, type TypeBloc } from "@/lib/blocs";
+
+// Éditeur intégré (F3) : le code se lit comme du code, les parties à compléter sont des « trous »
+// qu'on remplit au clic. On compose par blocs, sans jamais taper de syntaxe ; le JSON produit est
+// exactement celui qu'attend l'interpréteur du moteur.
+
+type Insertion = { chemin: Chemin; position: number };
+
+/** Pendant l'exécution : ligne en cours, lignes déjà exécutées, ligne suivante, ligne en erreur (numéros du moteur). */
+export type SuiviExecution = { courante: number | null; executees: Set<number>; suivante: number | null; erreur: number | null };
 
 interface ContexteEditeur {
   variables: string[];
   verrouille: boolean;
   modifier: (chemin: Chemin, f: (seq: Bloc[]) => Bloc[]) => void;
+  ouvert: string | null;
+  ouvrir: (id: string | null) => void;
+  insertion: Insertion | null;
+  inserer: (i: Insertion | null) => void;
+  suivi: SuiviExecution | null;
 }
 
 const Contexte = createContext<ContexteEditeur | null>(null);
 const useEditeur = () => useContext(Contexte)!;
 
-const COULEURS: Record<TypeBloc, string> = {
-  affectation: "border-l-[#2156e0]",
-  si: "border-l-[#d97706]",
-  tant_que: "border-l-[#7c3aed]",
-  pour: "border-l-[#7c3aed]",
-  ecrire: "border-l-[#16884a]",
-};
+const cle = (chemin: Chemin) => chemin.join(".");
+const memeChemin = (a: Chemin, b: Chemin) => cle(a) === cle(b);
 
-/** Éditeur de blocs (F3) : affectation, si/sinon, tant que, pour, écrire — aucune syntaxe à taper. */
 export function EditeurBlocs({
   blocs,
   onChange,
   variables,
   verrouille = false,
+  suivi = null,
+  sansCadre = false,
 }: {
   blocs: Bloc[];
   onChange: (b: Bloc[]) => void;
   variables: string[];
   verrouille?: boolean;
+  suivi?: SuiviExecution | null;
+  sansCadre?: boolean;
 }) {
+  const [ouvert, ouvrir] = useState<string | null>(null);
+  const [insertion, inserer] = useState<Insertion | null>(null);
   const modifier = (chemin: Chemin, f: (seq: Bloc[]) => Bloc[]) => onChange(modifierSequence(blocs, chemin, f));
+
+  // Un clic hors d'une bulle, ou Échap, referme bulle et menu d'insertion.
+  useEffect(() => {
+    if (!ouvert && !insertion) return;
+    const dehors = (e: PointerEvent) => {
+      if (!(e.target as Element).closest("[data-editeur-bulle]")) {
+        ouvrir(null);
+        inserer(null);
+      }
+    };
+    const echap = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      ouvrir(null);
+      inserer(null);
+    };
+    document.addEventListener("pointerdown", dehors);
+    window.addEventListener("keydown", echap);
+    return () => {
+      document.removeEventListener("pointerdown", dehors);
+      window.removeEventListener("keydown", echap);
+    };
+  }, [ouvert, insertion]);
+
+  const lignes = aplatir(blocs, [], 0, verrouille ? null : insertion);
+  const numerotee = (l: Ligne) => l.sorte === "bloc" || l.sorte === "sinon" || l.sorte === "fin";
+  // Numéro de ligne de code : les menus et les corps vides n'en ont pas.
+  const numeros = lignes.map((l, k) => (numerotee(l) ? lignes.slice(0, k + 1).filter(numerotee).length : null));
+
   return (
-    <Contexte.Provider value={{ variables, verrouille, modifier }}>
-      {verrouille && (
-        <div className="mb-3 flex items-center gap-2 rounded-xl bg-primary-soft px-4 py-2.5 text-sm text-primary">
-          <Lock size={16} /> Ton algorithme est figé tant que tu n&apos;as pas comparé ta prédiction à la réalité.
+    <Contexte.Provider value={{ variables, verrouille, modifier, ouvert, ouvrir, insertion, inserer, suivi }}>
+      <div
+        className={
+          sansCadre
+            ? "text-[#e4e6ff]"
+            : "rounded-3xl border border-[#4b43b8]/60 bg-[#111338] p-3 text-[#e4e6ff] shadow-[0_30px_80px_-30px_rgb(108_92_252/0.55)]"
+        }
+      >
+        <div className={`mb-2.5 flex items-center gap-3 px-1 ${sansCadre ? "hidden" : ""}`}>
+          <span className="flex gap-1.5" aria-hidden>
+            <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+            <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
+            <span className="h-3 w-3 rounded-full bg-[#28c840]" />
+          </span>
+          <span className="rounded-lg bg-[#0b0d29] px-3 py-1 text-xs font-semibold">mon algorithme</span>
+          {verrouille ? (
+            <span className="ml-auto flex items-center gap-1.5 text-xs text-[#b4a3ff]">
+              <Lock size={13} /> figé jusqu&apos;à la comparaison
+            </span>
+          ) : (
+            <span className="ml-auto hidden text-xs text-white/40 sm:block">clique sur un … pour le remplir</span>
+          )}
         </div>
-      )}
-      <fieldset disabled={verrouille} className={verrouille ? "opacity-70" : ""}>
-        <Sequence blocs={blocs} chemin={[]} />
-      </fieldset>
+        <div className="rounded-2xl border border-white/5 bg-[#0b0d29] py-2 font-mono text-[14px]">
+          {lignes.map((l, k) => (
+            <LigneEditeur key={idLigne(l)} ligne={l} numero={numeros[k]} />
+          ))}
+        </div>
+      </div>
     </Contexte.Provider>
   );
 }
 
-function Sequence({ blocs, chemin }: { blocs: Bloc[]; chemin: Chemin }) {
-  const { modifier, verrouille } = useEditeur();
+// --------------------------------------------------------------------------
+// Les lignes affichées : instructions, « sinon », « fin … », corps vides, menu d'insertion
+// --------------------------------------------------------------------------
+
+type BlocSi = Extract<Bloc, { type: "si" }>;
+type Ligne =
+  | { sorte: "bloc"; bloc: Bloc; chemin: Chemin; index: number; taille: number; niveau: number }
+  | { sorte: "sinon"; bloc: BlocSi; chemin: Chemin; index: number; niveau: number }
+  | { sorte: "fin"; texte: string; chemin: Chemin; index: number; niveau: number }
+  | { sorte: "vide"; chemin: Chemin; niveau: number }
+  | { sorte: "menu"; chemin: Chemin; position: number; niveau: number };
+
+function idLigne(l: Ligne) {
+  if (l.sorte === "vide") return `vide:${cle(l.chemin)}`;
+  if (l.sorte === "menu") return `menu:${cle(l.chemin)}:${l.position}`;
+  return `${l.sorte}:${cle(l.chemin)}:${l.index}`;
+}
+
+function aplatir(blocs: Bloc[], chemin: Chemin, niveau: number, insertion: Insertion | null): Ligne[] {
+  const menu = (position: number): Ligne[] =>
+    insertion && memeChemin(insertion.chemin, chemin) && insertion.position === position ? [{ sorte: "menu", chemin, position, niveau }] : [];
+  const lignes: Ligne[] = [...menu(0)];
+  if (blocs.length === 0 && lignes.length === 0) lignes.push({ sorte: "vide", chemin, niveau });
+  blocs.forEach((bloc, index) => {
+    lignes.push({ sorte: "bloc", bloc, chemin, index, taille: blocs.length, niveau });
+    if (bloc.type === "si") {
+      lignes.push(...aplatir(bloc.alors, [...chemin, index, "alors"], niveau + 1, insertion));
+      const cheminSinon: Chemin = [...chemin, index, "sinon"];
+      if (bloc.sinon.length || (insertion && memeChemin(insertion.chemin, cheminSinon))) {
+        lignes.push({ sorte: "sinon", bloc, chemin, index, niveau });
+        lignes.push(...aplatir(bloc.sinon, cheminSinon, niveau + 1, insertion));
+      }
+      lignes.push({ sorte: "fin", texte: "fin si", chemin, index, niveau });
+    } else if (bloc.type === "tant_que" || bloc.type === "pour") {
+      lignes.push(...aplatir(bloc.corps, [...chemin, index, "corps"], niveau + 1, insertion));
+      lignes.push({ sorte: "fin", texte: bloc.type === "pour" ? "fin pour" : "fin tant que", chemin, index, niveau });
+    }
+    lignes.push(...menu(index + 1));
+  });
+  return lignes;
+}
+
+/** Où « + » insère une ligne : dans le corps d'un bloc ouvrant, sinon juste après. */
+function pointInsertion(l: Ligne): Insertion | null {
+  if (l.sorte === "bloc") {
+    if (l.bloc.type === "si") return { chemin: [...l.chemin, l.index, "alors"], position: 0 };
+    if (l.bloc.type === "pour" || l.bloc.type === "tant_que") return { chemin: [...l.chemin, l.index, "corps"], position: 0 };
+    return { chemin: l.chemin, position: l.index + 1 };
+  }
+  if (l.sorte === "sinon") return { chemin: [...l.chemin, l.index, "sinon"], position: 0 };
+  if (l.sorte === "fin") return { chemin: l.chemin, position: l.index + 1 };
+  return null;
+}
+
+const RETRAIT = 1.5; // rem par niveau
+
+function LigneEditeur({ ligne, numero }: { ligne: Ligne; numero: number | null }) {
+  const { verrouille, inserer, suivi } = useEditeur();
+  const courante = !!suivi && numero !== null && suivi.courante === numero;
+  const executee = !!suivi && numero !== null && suivi.executees.has(numero);
+  const suivante = !!suivi && numero !== null && suivi.suivante === numero && !courante;
+  const enErreur = !!suivi && numero !== null && suivi.erreur === numero;
+  const point = pointInsertion(ligne);
+  // Un trait vertical discret par niveau d'indentation, comme dans un éditeur de code.
+  const retrait = {
+    paddingLeft: `${ligne.niveau * RETRAIT + 0.25}rem`,
+    backgroundImage: `repeating-linear-gradient(to right, rgb(255 255 255 / 0.08) 0 1px, transparent 1px ${RETRAIT}rem)`,
+    backgroundSize: `${ligne.niveau * RETRAIT}rem 100%`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "0.3rem 0",
+  };
+
   return (
-    <div className="flex flex-col gap-2">
-      {blocs.map((b, k) => (
-        <CarteBloc
-          key={k}
-          bloc={b}
-          premier={k === 0}
-          dernier={k === blocs.length - 1}
-          chemin={chemin}
-          index={k}
-          remplacer={(nouveau) => modifier(chemin, (seq) => seq.map((x, j) => (j === k ? nouveau : x)))}
-        />
-      ))}
-      {!verrouille && <AjoutBloc onAjouter={(t) => modifier(chemin, (seq) => [...seq, blocVide(t)])} vide={blocs.length === 0} />}
+    <div
+      aria-current={courante ? "step" : undefined}
+      className={`group relative flex min-h-9 items-center pr-2 transition-colors duration-300 ${
+        enErreur
+          ? "bg-[#ff5f57]/20"
+          : courante
+            ? "bg-[#6c5cfc]/35 shadow-[inset_3px_0_0_#8b7bff]"
+            : suivante
+              ? "shadow-[inset_3px_0_0_rgb(139_123_255/0.35)]"
+              : "hover:bg-white/[0.03] focus-within:bg-white/[0.04]"
+      } ${suivi && !executee && !courante ? "opacity-60" : ""}`}
+    >
+      <span className="flex w-11 shrink-0 select-none items-center justify-end gap-0.5 pr-2 text-right text-white/30 sm:w-14 sm:gap-1 sm:pr-3">
+        {!verrouille && point && (
+          <button
+            type="button"
+            data-editeur-bulle
+            onClick={() => inserer(point)}
+            aria-label={`Insérer une ligne après la ligne ${numero}`}
+            className="flex h-5 w-5 items-center justify-center rounded-md text-[#f062b8] opacity-0 transition-opacity hover:bg-[#f062b8]/15 focus:opacity-100 group-hover:opacity-100"
+          >
+            <Plus size={14} />
+          </button>
+        )}
+        <span className={`w-5 ${courante ? "font-bold text-[#b4a3ff]" : ""}`}>{courante ? "▶" : numero}</span>
+        {suivi && numero !== null && (
+          <span
+            aria-hidden
+            className={`h-1.5 w-1.5 shrink-0 rounded-full ${enErreur ? "bg-[#ff5f57]" : executee ? "bg-[#3ddbb0]" : "bg-white/15"}`}
+            title={executee ? "déjà exécutée" : "pas encore exécutée"}
+          />
+        )}
+      </span>
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1 self-stretch py-1" style={retrait}>
+        <ContenuLigne ligne={ligne} />
+      </div>
+      {!verrouille && ligne.sorte === "bloc" && <OutilsLigne ligne={ligne} />}
     </div>
   );
 }
 
-function AjoutBloc({ onAjouter, vide }: { onAjouter: (t: TypeBloc) => void; vide: boolean }) {
-  const [ouvert, setOuvert] = useState(false);
-  if (!ouvert) {
+function Mot({ children }: { children: ReactNode }) {
+  return <span className="text-[#c4a7ff]">{children}</span>;
+}
+
+function ContenuLigne({ ligne }: { ligne: Ligne }) {
+  const { modifier, inserer, verrouille } = useEditeur();
+  if (ligne.sorte === "fin") return <Mot>{ligne.texte}</Mot>;
+  if (ligne.sorte === "sinon") return <Mot>sinon</Mot>;
+  if (ligne.sorte === "vide") {
+    if (verrouille) return <span className="text-white/25">…</span>;
     return (
       <button
         type="button"
-        onClick={() => setOuvert(true)}
-        className={`flex items-center gap-2 self-start rounded-lg border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted hover:border-primary hover:text-primary ${vide ? "w-full justify-center py-3" : ""}`}
+        data-editeur-bulle
+        onClick={() => inserer({ chemin: ligne.chemin, position: 0 })}
+        className="rounded-md px-1.5 text-left text-white/35 transition-colors hover:bg-white/5 hover:text-[#f062b8]"
       >
-        <Plus size={14} /> Ajouter un bloc
+        {ligne.chemin.length === 0 ? "+ ta première instruction" : "+ ajouter ici"}
       </button>
     );
   }
-  return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-primary bg-primary-soft/50 p-2">
-      {(Object.keys(LIBELLES_BLOC) as TypeBloc[]).map((t) => (
-        <button
-          key={t}
-          type="button"
-          onClick={() => {
-            onAjouter(t);
-            setOuvert(false);
-          }}
-          className={`rounded-lg border border-border border-l-4 bg-surface px-3 py-1.5 text-xs font-semibold ${COULEURS[t]}`}
-        >
-          {LIBELLES_BLOC[t]}
-        </button>
-      ))}
-      <button type="button" onClick={() => setOuvert(false)} className="ml-auto p-1 text-muted" aria-label="Fermer">
-        <X size={14} />
-      </button>
-    </div>
-  );
+  if (ligne.sorte === "menu") return <MenuInsertion chemin={ligne.chemin} position={ligne.position} />;
+
+  const { bloc, chemin, index } = ligne;
+  const id = (champ: string) => `${cle(chemin)}:${index}:${champ}`;
+  const remplacer = (nouveau: Bloc) => modifier(chemin, (seq) => seq.map((x, j) => (j === index ? nouveau : x)));
+
+  switch (bloc.type) {
+    case "affectation":
+      return (
+        <>
+          <span className="flex items-center">
+            <TrouVariable id={id("variable")} valeur={bloc.variable} onChange={(variable) => remplacer({ ...bloc, variable })} />
+            {bloc.index !== undefined && (
+              <>
+                <span>[</span>
+                <TrouExpression id={id("index")} valeur={bloc.index} sorte="calcul" vide="i" onChange={(i) => remplacer({ ...bloc, index: i })} />
+                <span>]</span>
+              </>
+            )}
+          </span>
+          <span className="text-[#f062b8]">←</span>
+          <TrouExpression id={id("valeur")} valeur={bloc.valeur} sorte="calcul" onChange={(valeur) => remplacer({ ...bloc, valeur })} />
+        </>
+      );
+    case "ecrire":
+      return (
+        <span className="flex flex-wrap items-center">
+          <Mot>écrire(</Mot>
+          {bloc.valeurs.map((v, k) => (
+            <span key={k} className="flex items-center">
+              {k > 0 && <span className="mr-1 text-white/60">,</span>}
+              <TrouExpression
+                id={id(`valeur${k}`)}
+                valeur={v}
+                sorte="calcul"
+                onChange={(nv) => remplacer({ ...bloc, valeurs: bloc.valeurs.map((x, j) => (j === k ? nv : x)) })}
+                onRetirer={bloc.valeurs.length > 1 ? () => remplacer({ ...bloc, valeurs: bloc.valeurs.filter((_, j) => j !== k) }) : undefined}
+              />
+            </span>
+          ))}
+          <Mot>)</Mot>
+        </span>
+      );
+    case "si":
+      return (
+        <>
+          <Mot>si</Mot>
+          <TrouExpression id={id("condition")} valeur={bloc.condition} sorte="condition" onChange={(condition) => remplacer({ ...bloc, condition })} />
+          <Mot>alors</Mot>
+        </>
+      );
+    case "tant_que":
+      return (
+        <>
+          <Mot>tant que</Mot>
+          <TrouExpression id={id("condition")} valeur={bloc.condition} sorte="condition" onChange={(condition) => remplacer({ ...bloc, condition })} />
+          <Mot>faire</Mot>
+        </>
+      );
+    case "pour":
+      return (
+        <>
+          <Mot>pour</Mot>
+          <TrouVariable id={id("variable")} valeur={bloc.variable} onChange={(variable) => remplacer({ ...bloc, variable })} />
+          <Mot>de</Mot>
+          <TrouExpression id={id("debut")} valeur={bloc.debut} sorte="calcul" onChange={(debut) => remplacer({ ...bloc, debut })} />
+          <Mot>à</Mot>
+          <TrouExpression id={id("fin")} valeur={bloc.fin} sorte="calcul" onChange={(fin) => remplacer({ ...bloc, fin })} />
+          <Mot>faire</Mot>
+        </>
+      );
+  }
 }
 
-function MotCle({ children }: { children: ReactNode }) {
-  return <span className="font-mono text-sm font-semibold text-primary">{children}</span>;
-}
-
-function CarteBloc({
-  bloc,
-  chemin,
-  index,
-  premier,
-  dernier,
-  remplacer,
-}: {
-  bloc: Bloc;
-  chemin: Chemin;
-  index: number;
-  premier: boolean;
-  dernier: boolean;
-  remplacer: (b: Bloc) => void;
-}) {
-  const { modifier, verrouille } = useEditeur();
+/** Monter, descendre, supprimer, et l'option propre à chaque instruction : visibles au survol seulement. */
+function OutilsLigne({ ligne }: { ligne: Extract<Ligne, { sorte: "bloc" }> }) {
+  const { modifier, inserer } = useEditeur();
+  const { bloc, chemin, index, taille } = ligne;
+  const remplacer = (nouveau: Bloc) => modifier(chemin, (seq) => seq.map((x, j) => (j === index ? nouveau : x)));
   const deplacer = (delta: number) =>
     modifier(chemin, (seq) => {
       const copie = [...seq];
@@ -139,300 +332,301 @@ function CarteBloc({
       return copie;
     });
 
-  const outils = !verrouille && (
-    <div className="ml-auto flex shrink-0 items-center gap-0.5 text-muted">
-      <button type="button" disabled={premier} onClick={() => deplacer(-1)} className="rounded p-1 hover:text-text disabled:opacity-30" aria-label="Monter">
-        <ArrowUp size={14} />
-      </button>
-      <button type="button" disabled={dernier} onClick={() => deplacer(1)} className="rounded p-1 hover:text-text disabled:opacity-30" aria-label="Descendre">
-        <ArrowDown size={14} />
-      </button>
-      <button
-        type="button"
-        onClick={() => modifier(chemin, (seq) => seq.filter((_, j) => j !== index))}
-        className="rounded p-1 hover:text-danger"
-        aria-label="Supprimer le bloc"
-      >
-        <Trash2 size={14} />
-      </button>
-    </div>
-  );
+  const option =
+    bloc.type === "si" ? (
+      bloc.sinon.length ? (
+        <Outil onClick={() => remplacer({ ...bloc, sinon: [] })}>− sinon</Outil>
+      ) : (
+        <Outil onClick={() => inserer({ chemin: [...chemin, index, "sinon"], position: 0 })}>+ sinon</Outil>
+      )
+    ) : bloc.type === "ecrire" ? (
+      <Outil onClick={() => remplacer({ ...bloc, valeurs: [...bloc.valeurs, ""] })}>+ valeur</Outil>
+    ) : bloc.type === "affectation" ? (
+      bloc.index !== undefined ? (
+        <Outil onClick={() => remplacer({ type: "affectation", variable: bloc.variable, valeur: bloc.valeur })}>− case</Outil>
+      ) : (
+        <Outil onClick={() => remplacer({ ...bloc, index: "" })}>une case [ ]</Outil>
+      )
+    ) : null;
 
-  const cadre = `rounded-xl border border-border border-l-4 bg-surface p-3 shadow-card ${COULEURS[bloc.type]}`;
-
-  switch (bloc.type) {
-    case "affectation":
-      return (
-        <div className={cadre}>
-          <div className="flex flex-wrap items-center gap-2">
-            <ChoixVariable valeur={bloc.variable} onChange={(variable) => remplacer({ ...bloc, variable })} />
-            {bloc.index !== undefined ? (
-              <>
-                <MotCle>[</MotCle>
-                <ChampExpression valeur={bloc.index} onChange={(index) => remplacer({ ...bloc, index })} court />
-                <MotCle>]</MotCle>
-                <BoutonTexte onClick={() => remplacer({ type: "affectation", variable: bloc.variable, valeur: bloc.valeur })}>
-                  toute la variable
-                </BoutonTexte>
-              </>
-            ) : (
-              <BoutonTexte onClick={() => remplacer({ ...bloc, index: "" })}>une case [ ]</BoutonTexte>
-            )}
-            <MotCle>←</MotCle>
-            <ChampExpression valeur={bloc.valeur} onChange={(valeur) => remplacer({ ...bloc, valeur })} />
-            {outils}
-          </div>
-        </div>
-      );
-    case "ecrire":
-      return (
-        <div className={cadre}>
-          <div className="flex flex-wrap items-center gap-2">
-            <MotCle>écrire(</MotCle>
-            {bloc.valeurs.map((v, k) => (
-              <span key={k} className="flex items-center gap-1">
-                {k > 0 && <MotCle>,</MotCle>}
-                <ChampExpression
-                  valeur={v}
-                  onChange={(nv) => remplacer({ ...bloc, valeurs: bloc.valeurs.map((x, j) => (j === k ? nv : x)) })}
-                />
-                {bloc.valeurs.length > 1 && !verrouille && (
-                  <button
-                    type="button"
-                    onClick={() => remplacer({ ...bloc, valeurs: bloc.valeurs.filter((_, j) => j !== k) })}
-                    className="p-0.5 text-muted hover:text-danger"
-                    aria-label="Retirer cette valeur"
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-              </span>
-            ))}
-            {!verrouille && <BoutonTexte onClick={() => remplacer({ ...bloc, valeurs: [...bloc.valeurs, ""] })}>+ valeur</BoutonTexte>}
-            <MotCle>)</MotCle>
-            {outils}
-          </div>
-        </div>
-      );
-    case "si":
-      return (
-        <div className={cadre}>
-          <div className="flex flex-wrap items-center gap-2">
-            <MotCle>si</MotCle>
-            <ChampExpression valeur={bloc.condition} onChange={(condition) => remplacer({ ...bloc, condition })} />
-            <MotCle>alors</MotCle>
-            {outils}
-          </div>
-          <Corps>
-            <Sequence blocs={bloc.alors} chemin={[...chemin, index, "alors"]} />
-          </Corps>
-          {bloc.sinon.length > 0 ? (
-            <>
-              <div className="mt-2 flex items-center gap-2">
-                <MotCle>sinon</MotCle>
-                {!verrouille && (
-                  <BoutonTexte onClick={() => remplacer({ ...bloc, sinon: [] })}>retirer le sinon</BoutonTexte>
-                )}
-              </div>
-              <Corps>
-                <Sequence blocs={bloc.sinon} chemin={[...chemin, index, "sinon"]} />
-              </Corps>
-            </>
-          ) : (
-            !verrouille && (
-              <div className="mt-2">
-                <BoutonTexte onClick={() => remplacer({ ...bloc, sinon: [blocVide("affectation")] })}>+ sinon</BoutonTexte>
-              </div>
-            )
-          )}
-          <div className="mt-2">
-            <MotCle>fin si</MotCle>
-          </div>
-        </div>
-      );
-    case "tant_que":
-      return (
-        <div className={cadre}>
-          <div className="flex flex-wrap items-center gap-2">
-            <MotCle>tant que</MotCle>
-            <ChampExpression valeur={bloc.condition} onChange={(condition) => remplacer({ ...bloc, condition })} />
-            <MotCle>faire</MotCle>
-            {outils}
-          </div>
-          <Corps>
-            <Sequence blocs={bloc.corps} chemin={[...chemin, index, "corps"]} />
-          </Corps>
-          <div className="mt-2">
-            <MotCle>fin tant que</MotCle>
-          </div>
-        </div>
-      );
-    case "pour":
-      return (
-        <div className={cadre}>
-          <div className="flex flex-wrap items-center gap-2">
-            <MotCle>pour</MotCle>
-            <ChoixVariable valeur={bloc.variable} onChange={(variable) => remplacer({ ...bloc, variable })} />
-            <MotCle>de</MotCle>
-            <ChampExpression valeur={bloc.debut} onChange={(debut) => remplacer({ ...bloc, debut })} court />
-            <MotCle>à</MotCle>
-            <ChampExpression valeur={bloc.fin} onChange={(fin) => remplacer({ ...bloc, fin })} />
-            <MotCle>faire</MotCle>
-            {outils}
-          </div>
-          <Corps>
-            <Sequence blocs={bloc.corps} chemin={[...chemin, index, "corps"]} />
-          </Corps>
-          <div className="mt-2">
-            <MotCle>fin pour</MotCle>
-          </div>
-        </div>
-      );
-  }
-}
-
-function Corps({ children }: { children: ReactNode }) {
-  return <div className="mt-2 border-l-2 border-dashed border-border pl-4 sm:pl-6">{children}</div>;
-}
-
-function BoutonTexte({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
-    <button type="button" onClick={onClick} className="rounded-md px-1.5 py-0.5 text-xs text-muted underline-offset-2 hover:text-primary hover:underline">
+    <span
+      data-editeur-bulle
+      className="pointer-events-none absolute right-1.5 top-1 flex items-center gap-0.5 rounded-lg bg-[#161a45]/95 px-1 font-sans text-white/55 opacity-0 shadow-lg transition-opacity focus-within:pointer-events-auto focus-within:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100"
+    >
+      {option}
+      <Outil onClick={() => deplacer(-1)} desactive={index === 0} etiquette="Monter la ligne">
+        <ArrowUp size={14} />
+      </Outil>
+      <Outil onClick={() => deplacer(1)} desactive={index === taille - 1} etiquette="Descendre la ligne">
+        <ArrowDown size={14} />
+      </Outil>
+      <Outil onClick={() => modifier(chemin, (seq) => seq.filter((_, j) => j !== index))} etiquette="Supprimer la ligne" danger>
+        <Trash2 size={14} />
+      </Outil>
+    </span>
+  );
+}
+
+function Outil({
+  onClick,
+  children,
+  desactive = false,
+  etiquette,
+  danger = false,
+}: {
+  onClick: () => void;
+  children: ReactNode;
+  desactive?: boolean;
+  etiquette?: string;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={desactive}
+      aria-label={etiquette}
+      title={etiquette}
+      className={`rounded-md px-1.5 py-1 text-xs transition-colors hover:bg-white/10 disabled:opacity-25 ${danger ? "hover:text-[#ff7a66]" : "hover:text-white"}`}
+    >
       {children}
     </button>
   );
 }
 
-const NOM_VALIDE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const MODELES: { type: TypeBloc; apercu: string }[] = [
+  { type: "affectation", apercu: "x ← …" },
+  { type: "ecrire", apercu: "écrire(…)" },
+  { type: "si", apercu: "si … alors" },
+  { type: "pour", apercu: "pour … faire" },
+  { type: "tant_que", apercu: "tant que … faire" },
+];
 
-function ChoixVariable({ valeur, onChange }: { valeur: string; onChange: (v: string) => void }) {
-  const { variables, verrouille } = useEditeur();
-  const [nouveau, setNouveau] = useState(false);
-  const [saisie, setSaisie] = useState("");
+const PREMIER_TROU: Record<TypeBloc, string> = {
+  affectation: "variable",
+  ecrire: "valeur0",
+  si: "condition",
+  pour: "variable",
+  tant_que: "condition",
+};
 
-  if (nouveau) {
-    const valide = NOM_VALIDE.test(saisie);
-    return (
-      <span className="flex items-center gap-1">
-        <input
-          autoFocus
-          value={saisie}
-          onChange={(e) => setSaisie(e.target.value.replace(/\s/g, ""))}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && valide) {
-              e.preventDefault();
-              onChange(saisie);
-              setNouveau(false);
-            }
-            if (e.key === "Escape") setNouveau(false);
-          }}
-          placeholder="nom"
-          aria-label="Nom de la nouvelle variable"
-          className="w-24 rounded-lg border border-primary bg-bg px-2 py-1 font-mono text-sm outline-none"
-        />
-        <button
-          type="button"
-          disabled={!valide}
-          onClick={() => {
-            onChange(saisie);
-            setNouveau(false);
-          }}
-          className="rounded-lg bg-primary px-2 py-1 text-xs text-on-primary disabled:opacity-40"
-        >
-          OK
-        </button>
-      </span>
-    );
-  }
-
-  const options = [...new Set([...variables, ...(valeur ? [valeur] : [])])];
+/** Le choix de l'instruction à insérer, montré comme le code qu'elle produira. */
+function MenuInsertion({ chemin, position }: { chemin: Chemin; position: number }) {
+  const { modifier, inserer, ouvrir } = useEditeur();
   return (
-    <select
-      value={valeur}
-      disabled={verrouille}
-      onChange={(e) => {
-        if (e.target.value === "__nouvelle__") {
-          setSaisie("");
-          setNouveau(true);
-        } else onChange(e.target.value);
-      }}
-      aria-label="Variable"
-      className={`rounded-lg border bg-bg px-2 py-1 font-mono text-sm font-semibold outline-none focus:border-primary ${valeur ? "border-border" : "border-dashed border-accent text-muted"}`}
-    >
-      <option value="">variable…</option>
-      {options.map((v) => (
-        <option key={v} value={v}>
-          {v}
-        </option>
+    <span data-editeur-bulle className="flex flex-wrap items-center gap-1.5 rounded-xl border border-[#f062b8]/40 bg-[#f062b8]/5 p-1.5 font-sans">
+      {MODELES.map((m) => (
+        <button
+          key={m.type}
+          type="button"
+          autoFocus={m.type === "affectation"}
+          onClick={() => {
+            modifier(chemin, (seq) => [...seq.slice(0, position), blocVide(m.type), ...seq.slice(position)]);
+            inserer(null);
+            ouvrir(`${cle(chemin)}:${position}:${PREMIER_TROU[m.type]}`);
+          }}
+          className="rounded-lg border border-white/10 bg-[#111338] px-2.5 py-1 font-mono text-[13px] transition-colors hover:border-[#8b7bff] focus:border-[#8b7bff] focus:outline-none"
+        >
+          {colorer(m.apercu)}
+        </button>
       ))}
-      <option value="__nouvelle__">+ nouvelle variable</option>
-    </select>
+      <button type="button" onClick={() => inserer(null)} aria-label="Annuler l'insertion" className="rounded-md p-1 text-white/40 hover:text-white">
+        <X size={14} />
+      </button>
+    </span>
   );
 }
 
-const OPERATEURS = [
-  { titre: "Calcul", jetons: ["+", "-", "*", "/", "div", "mod"] },
-  { titre: "Comparer", jetons: ["=", "≠", "<", "≤", ">", "≥"] },
-  { titre: "Logique", jetons: ["et", "ou", "non", "vrai", "faux"] },
-  { titre: "Tableaux", jetons: ["[", "]", ",", "longueur(", "(", ")"] },
-];
+// --------------------------------------------------------------------------
+// Les trous : un nom de variable, ou une expression composée jeton par jeton
+// --------------------------------------------------------------------------
 
-/** Une expression composée jeton par jeton : variables, nombres, opérateurs. */
-function ChampExpression({ valeur, onChange, court = false }: { valeur: string; onChange: (v: string) => void; court?: boolean }) {
-  const { variables, verrouille } = useEditeur();
-  const [ouvert, setOuvert] = useState(false);
+const NOM_VALIDE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+function Trou({
+  id,
+  rempli,
+  vide,
+  children,
+  bulle,
+}: {
+  id: string;
+  rempli: boolean;
+  vide: string;
+  children: ReactNode;
+  bulle: ReactNode;
+}) {
+  const { ouvert, ouvrir, verrouille } = useEditeur();
+  const actif = ouvert === id;
+  if (verrouille) return <span>{rempli ? children : <span className="text-white/30">{vide}</span>}</span>;
+  return (
+    <span data-editeur-bulle className="relative inline-flex">
+      <button
+        type="button"
+        onClick={() => ouvrir(actif ? null : id)}
+        aria-expanded={actif}
+        aria-label={rempli ? undefined : `Compléter : ${vide}`}
+        className={`rounded-md px-1 transition-colors ${
+          actif
+            ? "bg-[#6c5cfc]/30 ring-1 ring-[#8b7bff]"
+            : rempli
+              ? "hover:bg-white/10"
+              : "border-b-2 border-dashed border-[#f062b8]/70 px-2 text-[#f062b8]/80 hover:bg-[#f062b8]/10"
+        }`}
+      >
+        {rempli ? children : vide}
+      </button>
+      {actif && (
+        <span className="absolute left-0 top-full z-40 mt-1.5 flex w-[min(19rem,calc(100vw-2.5rem))] flex-col gap-2.5 rounded-xl border border-[#4b43b8]/80 bg-[#161a45] p-3 font-sans text-sm shadow-[0_20px_50px_-15px_rgb(0_0_0/0.8)]">
+          {bulle}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function Pastille({ children, onClick, accent = false }: { children: ReactNode; onClick: () => void; accent?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-md border px-2 py-0.5 font-mono text-[13px] transition-colors ${
+        accent ? "border-[#8fd8ff]/30 bg-[#8fd8ff]/10 text-[#8fd8ff] hover:border-[#8fd8ff]" : "border-white/10 bg-white/5 hover:border-[#8b7bff]"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function TrouVariable({ id, valeur, onChange }: { id: string; valeur: string; onChange: (v: string) => void }) {
+  const { variables, ouvrir } = useEditeur();
+  const [saisie, setSaisie] = useState("");
+  const valide = NOM_VALIDE.test(saisie);
+  const choisir = (v: string) => {
+    onChange(v);
+    setSaisie("");
+    ouvrir(null);
+  };
+  return (
+    <Trou
+      id={id}
+      rempli={!!valeur}
+      vide="variable"
+      bulle={
+        <>
+          {variables.length > 0 && (
+            <span className="flex flex-wrap gap-1.5">
+              {variables.map((v) => (
+                <Pastille key={v} onClick={() => choisir(v)} accent>
+                  {v}
+                </Pastille>
+              ))}
+            </span>
+          )}
+          <input
+            autoFocus
+            value={saisie}
+            onChange={(e) => setSaisie(e.target.value.replace(/\s/g, ""))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && valide) {
+                e.preventDefault();
+                choisir(saisie);
+              }
+            }}
+            placeholder="nouveau nom, puis Entrée"
+            aria-label="Nom de la nouvelle variable"
+            className="rounded-lg border border-white/15 bg-[#0b0d29] px-2.5 py-1.5 font-mono text-[13px] outline-none placeholder:text-white/30 focus:border-[#8b7bff]"
+          />
+        </>
+      }
+    >
+      <span className="text-[#8fd8ff]">{valeur}</span>
+    </Trou>
+  );
+}
+
+const OPERATEURS = {
+  calcul: ["+", "-", "*", "/", "div", "mod", "(", ")"],
+  condition: ["=", "≠", "<", "≤", ">", "≥", "et", "ou", "non"],
+};
+const AUTRES = ["vrai", "faux", "[", "]", ",", "longueur("];
+
+function TrouExpression({
+  id,
+  valeur,
+  sorte,
+  vide = "…",
+  onChange,
+  onRetirer,
+}: {
+  id: string;
+  valeur: string;
+  sorte: "calcul" | "condition";
+  vide?: string;
+  onChange: (v: string) => void;
+  onRetirer?: () => void;
+}) {
+  const { variables, ouvrir } = useEditeur();
   const [nombre, setNombre] = useState("");
   const [texte, setTexte] = useState("");
+  const [plus, setPlus] = useState(false);
   const jetons = enJetons(valeur);
   const poser = (nouveaux: string[]) => onChange(depuisJetons(nouveaux));
   const ajouter = (j: string) => poser([...jetons, j]);
+  const operateurs = [...OPERATEURS[sorte], ...(plus ? OPERATEURS[sorte === "calcul" ? "condition" : "calcul"] : [])];
 
   return (
-    <span className="relative inline-flex flex-col">
-      <span
-        className={`flex min-h-8 flex-wrap items-center gap-1 rounded-lg border px-1.5 py-1 ${court ? "min-w-12" : "min-w-28"} ${
-          ouvert ? "border-primary bg-primary-soft/40" : jetons.length ? "border-border bg-bg" : "border-dashed border-accent bg-bg"
-        }`}
-      >
-        {jetons.map((j, k) => (
-          <button
-            key={k}
-            type="button"
-            disabled={verrouille}
-            onClick={() => poser(jetons.filter((_, x) => x !== k))}
-            title="Retirer ce jeton"
-            className={`rounded-md px-1.5 py-0.5 font-mono text-sm ${
-              variables.includes(j) ? "bg-primary-soft font-semibold text-primary" : j.startsWith('"') ? "bg-success-soft text-success" : "bg-surface-2"
-            } ${verrouille ? "" : "hover:line-through"}`}
-          >
-            {j}
-          </button>
-        ))}
-        {!verrouille && (
-          <button
-            type="button"
-            onClick={() => setOuvert((o) => !o)}
-            aria-expanded={ouvert}
-            aria-label="Composer l'expression"
-            className="rounded-md p-1 text-muted hover:text-primary"
-          >
-            {ouvert ? <X size={14} /> : <Plus size={14} />}
-          </button>
-        )}
-      </span>
-
-      {ouvert && !verrouille && (
-        <span className="absolute left-0 top-full z-30 mt-2 flex w-[min(22rem,85vw)] flex-col gap-3 rounded-xl border border-border bg-surface p-3 shadow-card">
-          <Palette titre="Variables">
-            {variables.length === 0 && <span className="text-xs text-muted">Aucune variable encore.</span>}
-            {variables.map((v) => (
-              <Jeton key={v} onClick={() => ajouter(v)} accent>
-                {v}
-              </Jeton>
+    <Trou
+      id={id}
+      rempli={jetons.length > 0}
+      vide={vide}
+      bulle={
+        <>
+          <span className="flex min-h-8 flex-wrap items-center gap-1 rounded-lg bg-[#0b0d29] px-2 py-1 font-mono text-[13px]">
+            {jetons.length === 0 && <span className="text-white/30">compose ta valeur…</span>}
+            {jetons.map((j, k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => poser(jetons.filter((_, x) => x !== k))}
+                title="Retirer"
+                className="rounded px-0.5 hover:bg-[#ff7a66]/20 hover:line-through"
+              >
+                {colorer(j)}
+              </button>
             ))}
-          </Palette>
-          <Palette titre="Nombre">
+            {jetons.length > 0 && (
+              <button type="button" onClick={() => poser(jetons.slice(0, -1))} aria-label="Effacer le dernier" className="ml-auto text-white/40 hover:text-white">
+                <Delete size={14} />
+              </button>
+            )}
+          </span>
+          {variables.length > 0 && (
+            <span className="flex flex-wrap gap-1.5">
+              {variables.map((v) => (
+                <Pastille key={v} onClick={() => ajouter(v)} accent>
+                  {v}
+                </Pastille>
+              ))}
+            </span>
+          )}
+          <span className="flex flex-wrap gap-1.5">
+            {operateurs.map((o) => (
+              <Pastille key={o} onClick={() => ajouter(o)}>
+                {o}
+              </Pastille>
+            ))}
+            {plus && AUTRES.map((o) => (
+              <Pastille key={o} onClick={() => ajouter(o)}>
+                {o}
+              </Pastille>
+            ))}
+          </span>
+          <span className="flex items-center gap-1.5">
             <input
+              autoFocus
               value={nombre}
               inputMode="decimal"
               onChange={(e) => setNombre(e.target.value.replace(/[^\d.,]/g, ""))}
@@ -443,79 +637,55 @@ function ChampExpression({ valeur, onChange, court = false }: { valeur: string; 
                   setNombre("");
                 }
               }}
+              placeholder="nombre ↵"
               aria-label="Nombre"
-              className="w-20 rounded-md border border-border bg-bg px-2 py-1 font-mono text-sm"
+              className="w-24 rounded-lg border border-white/15 bg-[#0b0d29] px-2 py-1 font-mono text-[13px] outline-none placeholder:text-white/30 focus:border-[#8b7bff]"
             />
-            <Jeton
-              onClick={() => {
-                if (nombre) ajouter(nombre.replace(",", "."));
-                setNombre("");
-              }}
-            >
-              ajouter
-            </Jeton>
-          </Palette>
-          {OPERATEURS.map((g) => (
-            <Palette key={g.titre} titre={g.titre}>
-              {g.jetons.map((j) => (
-                <Jeton key={j} onClick={() => ajouter(j)}>
-                  {j}
-                </Jeton>
-              ))}
-            </Palette>
-          ))}
-          <Palette titre="Texte">
-            <input
-              value={texte}
-              onChange={(e) => setTexte(e.target.value.replace(/"/g, ""))}
-              aria-label="Texte à afficher"
-              className="w-32 rounded-md border border-border bg-bg px-2 py-1 text-sm"
-            />
-            <Jeton
-              onClick={() => {
-                ajouter(`"${texte}"`);
-                setTexte("");
-              }}
-            >
-              ajouter
-            </Jeton>
-          </Palette>
-          <div className="flex gap-2 border-t border-border pt-3">
-            <button type="button" onClick={() => poser(jetons.slice(0, -1))} className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted hover:text-text">
-              <Delete size={14} /> dernier
+            {plus && (
+              <input
+                value={texte}
+                onChange={(e) => setTexte(e.target.value.replace(/"/g, ""))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    ajouter(`"${texte}"`);
+                    setTexte("");
+                  }
+                }}
+                placeholder="texte ↵"
+                aria-label="Texte"
+                className="w-24 rounded-lg border border-white/15 bg-[#0b0d29] px-2 py-1 text-[13px] outline-none placeholder:text-white/30 focus:border-[#8b7bff]"
+              />
+            )}
+            <button type="button" onClick={() => setPlus((x) => !x)} className="text-xs text-white/50 underline-offset-2 hover:text-white hover:underline">
+              {plus ? "moins" : "plus…"}
             </button>
-            <button type="button" onClick={() => poser([])} className="rounded-md px-2 py-1 text-xs text-muted hover:text-danger">
-              tout effacer
-            </button>
-            <button type="button" onClick={() => setOuvert(false)} className="ml-auto rounded-md bg-primary px-3 py-1 text-xs font-medium text-on-primary">
+          </span>
+          <span className="flex items-center gap-2 border-t border-white/10 pt-2.5">
+            {onRetirer && (
+              <button
+                type="button"
+                onClick={() => {
+                  onRetirer();
+                  ouvrir(null);
+                }}
+                className="text-xs text-white/50 hover:text-[#ff7a66]"
+              >
+                retirer cette valeur
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => ouvrir(null)}
+              className="ml-auto rounded-lg bg-[#6c5cfc] px-3 py-1 text-xs font-semibold text-white hover:bg-[#8577ff]"
+            >
               OK
             </button>
-          </div>
-        </span>
-      )}
-    </span>
-  );
-}
-
-function Palette({ titre, children }: { titre: string; children: ReactNode }) {
-  return (
-    <span className="flex flex-col gap-1.5">
-      <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">{titre}</span>
-      <span className="flex flex-wrap items-center gap-1.5">{children}</span>
-    </span>
-  );
-}
-
-function Jeton({ children, onClick, accent = false }: { children: ReactNode; onClick: () => void; accent?: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-md border px-2 py-0.5 font-mono text-sm ${
-        accent ? "border-primary/30 bg-primary-soft text-primary" : "border-border bg-surface-2 hover:border-primary"
-      }`}
+          </span>
+        </>
+      }
     >
-      {children}
-    </button>
+      {colorer(valeur)}
+    </Trou>
   );
 }

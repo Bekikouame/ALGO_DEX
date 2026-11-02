@@ -244,6 +244,39 @@ def cockpit(profil):
     }
 
 
+def bibliotheque(profil):
+    """Tous les cœurs actifs, pour s'entraîner au-delà du cœur de chaque notion (jamais la solution).
+    « principal » marque le cœur que montre le cockpit (CDC-1) ; les mêmes règles d'ouverture s'appliquent."""
+    ouvertes = notions_debloquees(etats_carte(profil))
+    en_cours = {
+        t.exercice_id: t.id
+        for t in Tentative.objects.filter(profil=profil, type="coeur", terminee=False)
+    }
+    reussis = set(
+        Tentative.objects.filter(profil=profil, type="coeur", sortie_correcte=True).values_list(
+            "exercice_id", flat=True
+        )
+    )
+    coeurs = Exercice.objects.filter(type="coeur", actif=True).order_by("ordre", "date_creation")
+    exercices, principaux = [], set()
+    for e in coeurs:
+        principal = e.notion not in principaux
+        principaux.add(e.notion)
+        exercices.append({
+            "id": e.id,
+            "notion": e.notion,
+            "titre": e.titre,
+            "enonce": e.enonce,
+            "ordre": e.ordre,
+            "principal": principal,
+            "accessible": e.notion in ouvertes,
+            "tentative_en_cours": en_cours.get(e.id),
+            "reussi": e.id in reussis,
+        })
+    exercices.sort(key=lambda x: (NOTIONS.index(x["notion"]), x["ordre"]))
+    return {"exercices": exercices}
+
+
 # --------------------------------------------------------------------------
 # Tentatives : le cycle complet (CDC-2), vérifié côté serveur
 # --------------------------------------------------------------------------

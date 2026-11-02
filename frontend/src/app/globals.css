@@ -5,8 +5,8 @@
 /* Clair : le papier crème et le bleu du « Défi ». Sombre : la nuit violette du cockpit. */
 :root {
   color-scheme: light;
-  --bg: #f6f1e8;
-  --surface: #fffdf8;
+  --bg: #f8f5ef;
+  --surface: #fffefb;
   --surface-2: #f1ebe0;
   --border: #e6ddcd;
   --text: #13203b;
@@ -98,6 +98,20 @@
   --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", Menlo, monospace;
   --font-hand: var(--font-caveat), "Comic Sans MS", cursive;
   --shadow-card: var(--shadow);
+}
+
+/* Ressources : l'ivoire et le bleu-violet de la maquette du cours, en thème clair seulement. */
+:root:not([data-theme="dark"]) .ressources {
+  --bg: #faf7f0;
+  --surface: #fffdf8;
+  --surface-2: #f4efe4;
+  --border: #ece3d3;
+  --text: #121a3a;
+  --primary: #3047f5;
+  --primary-strong: #2337dc;
+  --primary-soft: #e9ecff;
+  --lavande: #7052f5;
+  --rose: #7052f5;
 }
 
 html,
@@ -256,6 +270,21 @@ body {
 .scintille { animation: scintille 1.6s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
 @keyframes tourne-lent { to { transform: rotate(360deg); } }
 .tourne-lent { animation: tourne-lent 9s linear infinite; transform-origin: center; transform-box: fill-box; }
+
+/* Espace apprenant : ce qui flotte doucement (robot, variables de l'atelier). */
+@keyframes flotte {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.flotte { animation: flotte 4s ease-in-out infinite; }
+
+/* Barre latérale : l'élément actif arrive avec un léger rebond quand on change de page. */
+@keyframes actif-pop {
+  0% { transform: scale(0.92); }
+  60% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+.actif-pop { animation: actif-pop 0.35s ease-out; }
 
 /* Lecture guidée : le code attend sous un brouillard, la ligne à lire brille. */
 .brouillard { filter: blur(5px); opacity: 0.35; }

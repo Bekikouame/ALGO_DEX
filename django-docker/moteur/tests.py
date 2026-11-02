@@ -99,6 +99,27 @@ class ParcoursTests(APITestCase):
         liste = self.client.get(f"/api/profil?ids={self.profil}").json()
         self.assertEqual([p["pseudo"] for p in liste], ["Alex"])
 
+    # -- bibliothèque --
+
+    def test_bibliotheque(self):
+        call_command("charger_bibliotheque", stdout=open("/dev/null", "w"))
+        r = self.client.get(f"/api/bibliotheque?profil_id={self.profil}").json()["exercices"]
+        self.assertEqual(len(r), Exercice.objects.filter(type="coeur").count())
+        self.assertTrue(all("blocs" not in e for e in r))  # jamais la solution
+        self.assertEqual([e["titre"] for e in r if e["principal"]],
+                         ["La moyenne de deux notes", "Le plus grand des deux", "La factorielle",
+                          "La somme d'un tableau"])
+        # Le cockpit et le test de niveau ne changent pas.
+        cockpit = self.client.get(f"/api/cockpit?profil_id={self.profil}").json()
+        self.assertEqual(len(cockpit["exercices"]), 4)
+        self.assertEqual(sum(len(n["express"]) for n in cockpit["calibrage"]["notions"]), 8)
+        # Mêmes règles d'ouverture que les cœurs : variables ouverte, boucles verrouillée.
+        acces = {e["titre"]: e["accessible"] for e in r}
+        self.assertTrue(acces["Des secondes en heures"])
+        self.assertFalse(acces["Le PGCD d'Euclide"])
+        self.assertEqual(self.ouvrir(Exercice.objects.get(titre="Le PGCD d'Euclide")).status_code, 403)
+        self.assertEqual(self.ouvrir(Exercice.objects.get(titre="Des secondes en heures")).status_code, 201)
+
     # -- calibrage (F1) --
 
     def test_cascade(self):

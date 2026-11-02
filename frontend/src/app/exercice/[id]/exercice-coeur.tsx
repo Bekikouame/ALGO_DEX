@@ -4,8 +4,9 @@ import { ArrowRight, CheckCircle2, CircleHelp, Languages } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { BarreLaterale } from "@/components/barre-laterale";
 import { Chargement, MessageErreur } from "@/components/coque";
-import { Cycle } from "@/components/cycle/cycle";
+import { Laboratoire } from "@/components/labo/laboratoire";
 import { PseudoCode } from "@/components/cycle/pseudo-code";
 import { api, LIBELLES_NOTION, type Cockpit, type ExercicePublic, type Notion, type Progression, type Soumission } from "@/lib/api";
 import { GUIDES } from "@/lib/guides";
@@ -60,27 +61,20 @@ function Exercice({ id, profilId }: { id: string; profilId: string }) {
 
   const notion = depart.exercice.notion;
   return (
-    <>
-      <Cycle
-        key={depart.tentative.id}
-        depart={depart}
-        pseudo={cockpit?.profil.pseudo}
-        filAriane={
-          <>
-            <Link href="/parcours" className="hover:text-text">
-              Parcours
-            </Link>
-            <span className="mx-2">›</span>
-            {LIBELLES_NOTION[notion]}
-            <span className="mx-2">›</span>
-            <span className="text-text">{depart.exercice.titre}</span>
-          </>
-        }
-        asideDroite={<GuideNotion notion={notion} />}
-        onSoumis={surSoumission}
-      />
+    // Page de travail : la barre latérale est compacte par défaut, le laboratoire prend la largeur qu'elle libère.
+    <div className="flex">
+      <BarreLaterale pseudo={cockpit?.profil.pseudo} compacteParDefaut />
+      <div className="min-w-0 flex-1">
+        <Laboratoire
+          key={depart.tentative.id}
+          depart={depart}
+          pseudo={cockpit?.profil.pseudo}
+          aide={<GuideNotion notion={notion} />}
+          onSoumis={surSoumission}
+        />
+      </div>
       {reussite && <Recompense reussite={reussite} cockpit={cockpit} />}
-    </>
+    </div>
   );
 }
 
