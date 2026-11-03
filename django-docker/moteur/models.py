@@ -4,6 +4,7 @@ Miroir de ALGO_DEX_schema_v1.sql : noms de tables, champs, valeurs contrôlées
 (CHECK), unicités, CASCADE/RESTRICT et les trois index de service.
 """
 
+import secrets
 import uuid
 
 from django.db import models
@@ -22,9 +23,20 @@ def _choix(valeurs):
     return [(v, v) for v in valeurs]
 
 
+# Code de reprise : 8 caractères sans ambiguïté à la lecture (ni 0/O, ni 1/I/L), écrits XXXX-XXXX.
+ALPHABET_CODE = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+
+
+def nouveau_code_reprise():
+    tirage = "".join(secrets.choice(ALPHABET_CODE) for _ in range(8))
+    return f"{tirage[:4]}-{tirage[4:]}"
+
+
 class Profil(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     pseudo = models.CharField(max_length=40, unique=True)
+    # Avec le pseudo, il permet de retrouver le profil sur un autre appareil.
+    code_reprise = models.CharField(max_length=9, default=nouveau_code_reprise)
     date_creation = models.DateTimeField(auto_now_add=True)
     derniere_visite = models.DateTimeField(auto_now_add=True)
 
@@ -129,3 +141,25 @@ class Tentative(models.Model):
 
     def __str__(self):
         return f"{self.profil} · {self.exercice.titre} · {self.etape_atteinte}"
+
+
+class ChapitreLu(models.Model):
+    """Un chapitre du cours d'algorithmique que l'élève a marqué comme terminé (le contenu du cours vit côté site)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    profil = models.ForeignKey(
+        Profil, on_delete=models.CASCADE, related_name="chapitres_lus", db_column="profil_id"
+    )
+    chapitre = models.CharField(max_length=60)
+    date_lecture = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "chapitre_lu"
+        ordering = ["date_lecture"]
+        constraints = [
+            models.UniqueConstraint(fields=["profil", "chapitre"], name="chapitre_lu_unique"),
+            models.CheckConstraint(condition=Q(chapitre__regex=r"^[a-z0-9-]{1,60}$"), name="chapitre_lu_slug"),
+        ]
+
+    def __str__(self):
+        return f"{self.profil} · {self.chapitre}"

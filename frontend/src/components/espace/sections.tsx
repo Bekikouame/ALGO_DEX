@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Check, ChevronLeft, ChevronRight, Lock, MapPin, Pause, Play, Sparkles } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, ChevronRight, Copy, KeyRound, Lock, MapPin, Pause, Play, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { colorer } from "@/components/code/colorer";
@@ -589,6 +589,39 @@ export function Motivation() {
           «&nbsp;Ce n&apos;est pas la réponse qui compte, mais le chemin pour y arriver.&nbsp;»
         </p>
       </div>
+    </section>
+  );
+}
+
+/** Le code qui permet de retrouver ce profil sur un autre appareil, avec le pseudo. */
+export function CodeReprise({ code }: { code: string }) {
+  const [copie, setCopie] = useState(false);
+  return (
+    <section aria-labelledby="titre-code" className="rounded-[1.75rem] border border-border bg-surface p-carte">
+      <h2 id="titre-code" className="flex items-center gap-icone text-xs font-bold uppercase tracking-[0.14em] text-primary">
+        <KeyRound size={16} aria-hidden /> Mon code de reprise
+      </h2>
+      <div className="mt-titre flex items-center justify-between gap-3">
+        <span className="font-mono text-2xl font-semibold tracking-[0.12em]">{code}</span>
+        <button
+          type="button"
+          onClick={() => {
+            navigator.clipboard?.writeText(code).then(
+              () => {
+                setCopie(true);
+                window.setTimeout(() => setCopie(false), 2000);
+              },
+              () => {},
+            );
+          }}
+          className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm font-semibold text-text/80 transition-colors hover:border-primary hover:text-primary"
+        >
+          {copie ? <Check size={15} /> : <Copy size={15} />} {copie ? "Copié" : "Copier"}
+        </button>
+      </div>
+      <p className="mt-2 text-sm leading-relaxed text-text/65">
+        Note-le : avec ton pseudo, il te permet de retrouver ton profil sur un autre appareil. Garde-le pour toi.
+      </p>
     </section>
   );
 }

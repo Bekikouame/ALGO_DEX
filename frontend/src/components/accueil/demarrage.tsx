@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, UserRound, X } from "lucide-react";
+import { ArrowRight, KeyRound, UserRound, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { MessageErreur } from "@/components/coque";
@@ -62,6 +62,30 @@ export function Demarrage({
     } catch (err) {
       setErreur((err as Error).message);
       setEnvoi(false);
+    }
+  }
+
+  // Reprise sur un autre appareil : pseudo + code de reprise.
+  const [repPseudo, setRepPseudo] = useState("");
+  const [repCode, setRepCode] = useState("");
+  const [repErreur, setRepErreur] = useState<string | null>(null);
+  const [repEnvoi, setRepEnvoi] = useState(false);
+
+  async function reprendreParCode(e: FormEvent) {
+    e.preventDefault();
+    if (!nettoyerPseudo(repPseudo) || repCode.replace(/[^A-Za-z0-9]/g, "").length !== 8) {
+      setRepErreur("Indique ton pseudo et ton code de reprise (8 caractères, ex. K7QF-M2XP).");
+      return;
+    }
+    setRepErreur(null);
+    setRepEnvoi(true);
+    try {
+      const profil = await api.reprendreProfil(nettoyerPseudo(repPseudo), repCode);
+      setRepEnvoi(false);
+      choisir(profil);
+    } catch (err) {
+      setRepErreur((err as Error).message);
+      setRepEnvoi(false);
     }
   }
 
@@ -145,8 +169,7 @@ export function Demarrage({
             <p className="mt-6 text-sm text-muted">Chargement…</p>
           ) : profils.length === 0 ? (
             <p className="mt-6 rounded-xl border border-dashed border-border p-4 text-sm text-muted">
-              Aucun profil n&apos;est enregistré sur cet appareil. Un profil se retrouve sur l&apos;appareil où il a été
-              créé.
+              Aucun profil n&apos;est enregistré sur cet appareil.
             </p>
           ) : (
             <ul className="mt-6 flex flex-col gap-2">
@@ -187,6 +210,57 @@ export function Demarrage({
               <MessageErreur message={erreur} />
             </div>
           )}
+          <form onSubmit={reprendreParCode} noValidate className="mt-6 border-t border-border pt-5">
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <KeyRound size={16} className="text-primary" aria-hidden /> Sur un autre appareil&nbsp;?
+            </p>
+            <p className="mt-1 text-xs text-muted">Ton pseudo et ton code de reprise, affiché dans Mon espace.</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_9rem]">
+              <label className="sr-only" htmlFor="reprise-pseudo">
+                Pseudo
+              </label>
+              <input
+                id="reprise-pseudo"
+                value={repPseudo}
+                onChange={(e) => {
+                  setRepPseudo(e.target.value);
+                  setRepErreur(null);
+                }}
+                placeholder="Pseudo"
+                autoComplete="off"
+                maxLength={60}
+                className="min-w-0 rounded-xl border border-border bg-bg/70 px-3.5 py-2.5 text-sm outline-none focus:border-primary"
+              />
+              <label className="sr-only" htmlFor="reprise-code">
+                Code de reprise
+              </label>
+              <input
+                id="reprise-code"
+                value={repCode}
+                onChange={(e) => {
+                  setRepCode(e.target.value.toUpperCase());
+                  setRepErreur(null);
+                }}
+                placeholder="XXXX-XXXX"
+                autoComplete="off"
+                spellCheck={false}
+                maxLength={12}
+                className="min-w-0 rounded-xl border border-border bg-bg/70 px-3.5 py-2.5 font-mono text-sm tracking-wider outline-none focus:border-primary"
+              />
+            </div>
+            {repErreur && (
+              <div className="mt-3">
+                <MessageErreur message={repErreur} />
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={repEnvoi}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-primary/60 px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 disabled:opacity-60"
+            >
+              {repEnvoi ? "Recherche…" : "Retrouver mon profil"} <ArrowRight size={16} />
+            </button>
+          </form>
           <p className="mt-5 text-center text-sm text-muted">
             Nouveau ici&nbsp;?{" "}
             <button type="button" onClick={() => onVue("nouveau")} className="font-semibold text-text underline underline-offset-4 hover:text-primary">

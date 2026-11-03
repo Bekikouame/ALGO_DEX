@@ -12,8 +12,9 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 
 urlpatterns = [
     path(settings.CHEMIN_ADMIN, admin.site.urls),
+    # Sans barre finale : le site Next la retire avant de relayer /api/*, Django ne doit pas la rajouter.
     path("api/", include("moteur.urls")),
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger"),
-    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    path("api/schema", SpectacularAPIView.as_view(), name="schema"),
+    path("api/docs", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger"),
+    path("api/redoc", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
 ]

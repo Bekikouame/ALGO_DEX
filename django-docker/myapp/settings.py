@@ -193,6 +193,8 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "apprenant": os.environ.get("DJANGO_LIMITE_APPRENANT", "600/min"),
         "creation_profil": os.environ.get("DJANGO_LIMITE_CREATION_PROFIL", "60/hour"),
+        # Reprise par code : stricte, pour rendre impossible de deviner un code en essayant.
+        "reprise": os.environ.get("DJANGO_LIMITE_REPRISE", "10/hour"),
     },
     # Le navigateur passe par Next (/api/*), qui ajoute X-Forwarded-For : on lit l'IP réelle derrière ce relais.
     "NUM_PROXIES": int(os.environ.get("DJANGO_NB_PROXIES", "1")),

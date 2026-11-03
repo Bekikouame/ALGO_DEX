@@ -39,7 +39,7 @@ export interface PlanCascade {
 }
 
 export interface Cockpit {
-  profil: { id: string; pseudo: string; derniere_visite: string };
+  profil: { id: string; pseudo: string; derniere_visite: string; code_reprise: string };
   carte: LigneCarte[];
   notions_debloquees: Notion[];
   prochaine_notion: Notion | null;
@@ -213,7 +213,11 @@ const json = (corps: unknown) => JSON.stringify(corps);
 
 export const api = {
   profils: (ids: string[]) => appel<Profil[]>(`profil?ids=${ids.join(",")}`),
-  creerProfil: (pseudo: string) => appel<Profil>("profil", { method: "POST", body: json({ pseudo }) }),
+  creerProfil: (pseudo: string) => appel<Profil & { code_reprise: string }>("profil", { method: "POST", body: json({ pseudo }) }),
+  reprendreProfil: (pseudo: string, code: string) => appel<Profil>("profil/reprendre", { method: "POST", body: json({ pseudo, code }) }),
+  chapitresLus: (profilId: string) => appel<{ termines: string[] }>(`cours?profil_id=${profilId}`),
+  marquerChapitre: (profilId: string, chapitre: string, termine: boolean) =>
+    appel<{ termines: string[] }>("cours", { method: "POST", body: json({ profil_id: profilId, chapitre, termine }) }),
   cockpit: (profilId: string) => appel<Cockpit>(`cockpit?profil_id=${profilId}`),
   bibliotheque: (profilId: string) => appel<{ exercices: ExerciceBibliotheque[] }>(`bibliotheque?profil_id=${profilId}`),
   ouvrirTentative: (profilId: string, exerciceId: string) =>

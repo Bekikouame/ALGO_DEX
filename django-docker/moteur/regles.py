@@ -5,6 +5,7 @@ données, renvoie des dictionnaires, et lève ErreurRegle quand une règle
 non négociable est enfreinte. Le client ne calcule jamais un état.
 """
 
+import hmac
 import re
 
 from django.db import transaction
@@ -12,7 +13,7 @@ from django.utils import timezone
 
 from . import interpreteur
 from .interpreteur import BlocInvalide
-from .models import ETAPES, ETATS_VERTS, NOTIONS, CarteMaitrise, Exercice, Profil, Tentative
+from .models import ETAPES, ETATS_VERTS, NOTIONS, CarteMaitrise, ChapitreLu, Exercice, Profil, Tentative
 
 LANGAGES = ("python", "javascript", "java", "c")
 
@@ -65,6 +66,20 @@ def creer_profil(pseudo):
     CarteMaitrise.objects.bulk_create(
         [CarteMaitrise(profil=profil, notion=n, etat="a_faire") for n in NOTIONS]
     )
+    return profil
+
+
+def normaliser_code(code):
+    """« k7qf m2xp », « K7QFM2XP » ou « K7QF-M2XP » : la même chose."""
+    brut = re.sub(r"[^A-Za-z0-9]", "", code or "").upper()
+    return f"{brut[:4]}-{brut[4:]}" if len(brut) == 8 else brut
+
+
+def reprendre_profil(pseudo, code):
+    """Retrouver un profil sur un nouvel appareil : le pseudo et son code de reprise."""
+    profil = Profil.objects.filter(pseudo__iexact=nettoyer_pseudo(pseudo)).first()
+    if profil is None or not hmac.compare_digest(profil.code_reprise, normaliser_code(code)):
+        raise ErreurRegle("Pseudo ou code de reprise incorrect.", 404, "reprise_impossible")
     return profil
 
 
@@ -251,7 +266,12 @@ def cockpit(profil):
     exercices.sort(key=lambda x: NOTIONS.index(x["notion"]))
     recompenses.sort(key=lambda x: NOTIONS.index(x["notion"]))
     return {
-        "profil": {"id": profil.id, "pseudo": profil.pseudo, "derniere_visite": profil.derniere_visite},
+        "profil": {
+            "id": profil.id,
+            "pseudo": profil.pseudo,
+            "derniere_visite": profil.derniere_visite,
+            "code_reprise": profil.code_reprise,
+        },
         "carte": carte(profil),
         "notions_debloquees": ouvertes,
         "prochaine_notion": prochaine_notion(etats),
@@ -585,3 +605,25 @@ def supprimer_exercice(exercice):
             "suppression_interdite",
         )
     exercice.delete()
+
+
+# --------------------------------------------------------------------------
+# Lecture du cours : les chapitres marqués comme terminés
+# --------------------------------------------------------------------------
+
+MAX_CHAPITRES = 50
+
+
+def chapitres_lus(profil):
+    return list(profil.chapitres_lus.values_list("chapitre", flat=True))
+
+
+@transaction.atomic
+def marquer_chapitre(profil, chapitre, termine):
+    if termine:
+        if profil.chapitres_lus.count() >= MAX_CHAPITRES and not profil.chapitres_lus.filter(chapitre=chapitre).exists():
+            raise ErreurRegle("Trop de chapitres enregistrés pour ce profil.", 400, "trop_de_chapitres")
+        ChapitreLu.objects.get_or_create(profil=profil, chapitre=chapitre)
+    else:
+        profil.chapitres_lus.filter(chapitre=chapitre).delete()
+    return chapitres_lus(profil)

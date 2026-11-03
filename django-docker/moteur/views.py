@@ -22,11 +22,13 @@ from .interpreteur import BlocInvalide
 from .models import Exercice, Profil, Tentative
 from .regles import ErreurRegle
 from .serializers import (
+    ChapitreLuSerializer,
     ExecuterSerializer,
     ExerciceSerializer,
     ProfilCreationSerializer,
     ProfilRefSerializer,
     ProfilSerializer,
+    RepriseSerializer,
     TentativeActionSerializer,
     TentativeOuvertureSerializer,
     TesterSerializer,
@@ -54,6 +56,12 @@ class LimiteCreationProfil(AnonRateThrottle):
     """Création de profil : plus stricte, pour éviter qu'un script remplisse la base de pseudos."""
 
     scope = "creation_profil"
+
+
+class LimiteReprise(AnonRateThrottle):
+    """Reprise par pseudo et code : peu d'essais par heure."""
+
+    scope = "reprise"
 
 
 class VueApprenant(APIView):
@@ -117,7 +125,47 @@ class ProfilView(VueApprenant):
     def post(self, request):
         donnees = _valider(ProfilCreationSerializer, request.data)
         profil = regles.creer_profil(donnees["pseudo"])
-        return Response(ProfilSerializer(profil).data, status=201)
+        return Response({**ProfilSerializer(profil).data, "code_reprise": profil.code_reprise}, status=201)
+
+
+class RepriseView(VueApprenant):
+    throttle_classes = [LimiteApprenant, LimiteReprise]
+
+    @extend_schema(
+        tags=["profil"],
+        summary="Retrouver un profil sur un autre appareil",
+        description="Le pseudo et le code de reprise donnent l'identifiant du profil. Essais limités par adresse IP.",
+        request=RepriseSerializer,
+        responses=ProfilSerializer,
+    )
+    def post(self, request):
+        donnees = _valider(RepriseSerializer, request.data)
+        profil = regles.reprendre_profil(donnees["pseudo"], donnees["code"])
+        return Response(ProfilSerializer(profil).data)
+
+
+class CoursView(VueApprenant):
+    @extend_schema(
+        tags=["cours"],
+        summary="Chapitres du cours terminés",
+        parameters=[OpenApiParameter("profil_id", OpenApiTypes.UUID, required=True)],
+        responses=OpenApiTypes.OBJECT,
+    )
+    def get(self, request):
+        donnees = _valider(ProfilRefSerializer, request.query_params)
+        profil = get_object_or_404(Profil, pk=donnees["profil_id"])
+        return Response({"termines": regles.chapitres_lus(profil)})
+
+    @extend_schema(
+        tags=["cours"],
+        summary="Marquer un chapitre comme terminé (ou non)",
+        request=ChapitreLuSerializer,
+        responses=OpenApiTypes.OBJECT,
+    )
+    def post(self, request):
+        donnees = _valider(ChapitreLuSerializer, request.data)
+        profil = get_object_or_404(Profil, pk=donnees["profil_id"])
+        return Response({"termines": regles.marquer_chapitre(profil, donnees["chapitre"], donnees["termine"])})
 
 
 # --------------------------------------------------------------------------

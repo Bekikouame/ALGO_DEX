@@ -7,6 +7,7 @@ import { AtelierAlgo } from "@/components/espace/illustrations";
 import {
   Annotation,
   AutresExplorations,
+  CodeReprise,
   ExperienceEnCours,
   MaProgression,
   Motivation,
@@ -131,6 +132,7 @@ export default function MonEspace() {
           <MaProgression carte={cockpit.carte} debloquees={cockpit.notions_debloquees} recompenses={cockpit.recompenses.length} />
           <ProchaineEtape cockpit={cockpit} />
           <Motivation />
+          <CodeReprise code={cockpit.profil.code_reprise} />
         </aside>
       </div>
     </Coque>

@@ -226,7 +226,7 @@ function CarteProgression({ lecture }: { lecture: LectureCours }) {
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-primary-soft" role="progressbar" aria-valuemin={0} aria-valuemax={CHAPITRES.length} aria-valuenow={faits} aria-label="Chapitres terminés">
         <div className="h-full rounded-full bg-gradient-to-r from-primary to-lavande transition-[width] duration-700" style={{ width: `${part * 100}%` }} />
       </div>
-      <p className="mt-3 text-xs text-muted">Enregistrée sur cet appareil.</p>
+      <p className="mt-3 text-xs text-muted">Enregistrée sur ton profil.</p>
     </section>
   );
 }

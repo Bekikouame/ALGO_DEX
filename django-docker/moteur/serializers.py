@@ -19,6 +19,17 @@ class ProfilRefSerializer(serializers.Serializer):
     profil_id = serializers.UUIDField()
 
 
+class RepriseSerializer(serializers.Serializer):
+    pseudo = serializers.CharField(max_length=60)
+    code = serializers.CharField(max_length=20, help_text="Le code de reprise, avec ou sans tiret (ex. K7QF-M2XP).")
+
+
+class ChapitreLuSerializer(serializers.Serializer):
+    profil_id = serializers.UUIDField()
+    chapitre = serializers.RegexField(r"^[a-z0-9-]{1,60}$", help_text="Identifiant du chapitre (ex. variables-et-types).")
+    termine = serializers.BooleanField()
+
+
 class TentativeOuvertureSerializer(serializers.Serializer):
     profil_id = serializers.UUIDField()
     exercice_id = serializers.UUIDField()

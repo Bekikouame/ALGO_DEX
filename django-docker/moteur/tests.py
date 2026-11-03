@@ -7,7 +7,7 @@ from rest_framework.test import APITestCase
 from . import interpreteur
 from .interpreteur import BlocInvalide
 from .models import CarteMaitrise, Exercice, Tentative
-from .views import LimiteCreationProfil
+from .views import LimiteCreationProfil, LimiteReprise
 
 SOMME_TABLEAU = [
     {"type": "affectation", "variable": "s", "valeur": "0"},
@@ -143,6 +143,40 @@ class ParcoursTests(APITestCase):
         self.assertEqual(statuts, [201, 201, 201, 429])
         ids = ",".join(["00000000-0000-0000-0000-000000000000"] * 21)
         self.assertEqual(self.client.get(f"/api/profil?ids={ids}").status_code, 400)
+
+    def test_reprise_par_code(self):
+        cree = self.client.post("/api/profil", {"pseudo": "lina"}, format="json").json()
+        code = cree["code_reprise"]
+        self.assertRegex(code, r"^[A-Z2-9]{4}-[A-Z2-9]{4}$")
+        self.assertNotIn("code_reprise", self.client.get(f"/api/profil?ids={cree['id']}").json()[0])
+        cockpit = self.client.get(f"/api/cockpit?profil_id={cree['id']}").json()
+        self.assertEqual(cockpit["profil"]["code_reprise"], code)
+        reprendre = lambda pseudo, c: self.client.post("/api/profil/reprendre", {"pseudo": pseudo, "code": c}, format="json")
+        # pseudo sans tenir compte de la casse, code avec ou sans tiret, en minuscules
+        r = reprendre("LINA", code.replace("-", "").lower())
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["id"], cree["id"])
+        self.assertEqual(reprendre("lina", "AAAA-AAAA").status_code, 404)
+        self.assertEqual(reprendre("personne", code).status_code, 404)
+
+    def test_reprise_limitee(self):
+        cache.clear()
+        with patch.object(LimiteReprise, "THROTTLE_RATES", {"reprise": "2/hour"}):
+            statuts = [self.client.post("/api/profil/reprendre", {"pseudo": "Alex", "code": "AAAA-AAAA"}, format="json").status_code
+                       for _ in range(3)]
+        self.assertEqual(statuts, [404, 404, 429])
+
+    def test_chapitres_lus(self):
+        lire = lambda: self.client.get(f"/api/cours?profil_id={self.profil}").json()["termines"]
+        marquer = lambda c, t: self.client.post("/api/cours", {"profil_id": self.profil, "chapitre": c, "termine": t}, format="json")
+        self.assertEqual(lire(), [])
+        self.assertEqual(marquer("introduction", True).json()["termines"], ["introduction"])
+        marquer("introduction", True)  # deux fois : un seul enregistrement
+        marquer("variables-et-types", True)
+        self.assertEqual(lire(), ["introduction", "variables-et-types"])
+        marquer("introduction", False)
+        self.assertEqual(lire(), ["variables-et-types"])
+        self.assertEqual(marquer("../Pas Valable", True).status_code, 400)
 
     # -- calibrage (F1) --
 
