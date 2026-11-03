@@ -37,11 +37,28 @@ def nettoyer_pseudo(pseudo):
     return re.sub(r"\s+", " ", pseudo).strip()
 
 
+def verifier_pseudo(pseudo):
+    """Format d'un pseudo : lettres, chiffres, _ et un seul @, sans espace, avec au moins une lettre.
+    Renvoie le message d'erreur, ou None si le pseudo est valable."""
+    if not 2 <= len(pseudo) <= 40:
+        return "Le pseudo doit faire entre 2 et 40 caractères."
+    if re.search(r"\s", pseudo):
+        return "Pas d'espace dans le pseudo : colle les mots ou relie-les avec _ (ex. becca_12)."
+    interdits = sorted(set(re.sub(r"[\w@]", "", pseudo)))
+    if interdits:
+        return f"Caractère non autorisé : {' '.join(interdits)}. Utilise seulement des lettres, des chiffres, _ et @."
+    if pseudo.count("@") > 1:
+        return "Un seul @ par pseudo."
+    if not re.search(r"[^\W\d_]", pseudo):
+        return "Le pseudo doit contenir au moins une lettre."
+    return None
+
+
 @transaction.atomic
 def creer_profil(pseudo):
     pseudo = nettoyer_pseudo(pseudo)
-    if not 2 <= len(pseudo) <= 40:
-        raise ErreurRegle("Le pseudo doit faire entre 2 et 40 caractères.", 400, "pseudo_invalide")
+    if message := verifier_pseudo(pseudo):
+        raise ErreurRegle(message, 400, "pseudo_invalide")
     if Profil.objects.filter(pseudo__iexact=pseudo).exists():
         raise ErreurRegle("Ce pseudo est déjà pris : choisis-en un autre.", 409, "pseudo_pris")
     profil = Profil.objects.create(pseudo=pseudo)

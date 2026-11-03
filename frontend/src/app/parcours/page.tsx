@@ -1,7 +1,7 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Compass, Gauge, RotateCcw } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Coque, MessageErreur } from "@/components/coque";
 import { AtelierAlgo } from "@/components/espace/illustrations";
 import {
@@ -13,7 +13,7 @@ import {
   ProchaineEtape,
   type Experience,
 } from "@/components/espace/sections";
-import { api, type Cockpit, type Etape } from "@/lib/api";
+import { api, LIBELLES_NOTION, type Cockpit, type Etape } from "@/lib/api";
 import { lireBrouillon, useProfilActif } from "@/lib/profils";
 
 // Étapes franchies dans un exercice, d'après l'étape que le moteur a enregistrée.
@@ -34,55 +34,12 @@ async function experienceDe(cockpit: Cockpit): Promise<Experience> {
   return { sorte: "exercice", exercice, faites: faites === 0 && ecrit ? 1 : faites };
 }
 
-/**
- * Sur ordinateur, l'espace tient dans un écran, comme la maquette : s'il est plus haut que la fenêtre,
- * il est réduit proportionnellement (zoom CSS, texte net), sans descendre sous 70 % pour rester lisible.
- */
-function useTenirDansLEcran(pret: boolean) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState(1);
-  useEffect(() => {
-    const el = ref.current;
-    if (!pret || !el) return;
-    let essais = 0;
-    let image = 0;
-    // On mesure, on corrige, et on recommence tant que ça bouge : polices et illustrations arrivent après coup.
-    const ajuster = () => {
-      if (window.innerWidth < 1280) return setZoom(1);
-      const actuel = Number(getComputedStyle(el).zoom) || 1;
-      const boite = el.getBoundingClientRect(); // dimensions déjà zoomées
-      const voulu = Math.max(0.7, Math.min(1, actuel * ((window.innerHeight - boite.top - 20) / boite.height)));
-      if (Math.abs(actuel - voulu) > 0.004) {
-        setZoom(voulu);
-        if (essais++ < 8) image = requestAnimationFrame(ajuster);
-      }
-    };
-    const relancer = () => {
-      essais = 0;
-      cancelAnimationFrame(image);
-      ajuster();
-    };
-    relancer();
-    const observateur = new ResizeObserver(relancer);
-    observateur.observe(el);
-    window.addEventListener("resize", relancer);
-    document.fonts?.ready.then(relancer);
-    return () => {
-      cancelAnimationFrame(image);
-      observateur.disconnect();
-      window.removeEventListener("resize", relancer);
-    };
-  }, [pret]);
-  return { ref, zoom };
-}
-
 /** Mon espace : l'accueil personnalisé de l'apprenant, alimenté par le cockpit du moteur. */
 export default function MonEspace() {
   const profilId = useProfilActif();
   const [donnees, setDonnees] = useState<{ cockpit: Cockpit; experience: Experience } | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [essai, setEssai] = useState(0);
-  const { ref, zoom } = useTenirDansLEcran(!!donnees);
 
   // Relancé à chaque retour sur la page (Next la garde en mémoire) : on montre toujours l'état du moteur.
   useEffect(() => {
@@ -122,35 +79,47 @@ export default function MonEspace() {
 
   return (
     <Coque pseudo={pseudo} enTeteFlottant>
-      {/* Comme la maquette, tout l'espace tient dans un écran : les hauteurs suivent celle de la fenêtre. */}
-      <div ref={ref} style={{ zoom }} className="grid gap-x-7 gap-y-[clamp(0.75rem,2vh,1.4rem)] xl:grid-cols-[minmax(0,1fr)_19rem]">
-        <section className="relative flex items-center justify-between gap-6 xl:col-span-2">
+      {/* La page défile naturellement : la barre latérale reste fixe, la zone principale défile seule. */}
+      <div className="grid gap-section xl:grid-cols-[minmax(0,1fr)_21rem]">
+        <section className="relative grid items-center gap-section xl:col-span-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)]">
           <div className="scene-entree min-w-0">
-            <Annotation fleche="bas" className="-ml-1 text-lg">
+            <Annotation fleche="bas" className="-ml-1 text-xl">
               ton espace de travail
             </Annotation>
-            <h1 className="font-display text-4xl leading-tight xl:text-[clamp(2.2rem,4.4vh,2.75rem)]">Bonjour {pseudo},</h1>
-            <p className="texte-degrade font-display text-2xl leading-tight xl:text-[clamp(1.7rem,3.5vh,2.15rem)]">
-              Prêt à faire évoluer ton raisonnement&nbsp;?
+            <h1 className="font-display text-[2.75rem] leading-[1.05] sm:text-[3.4rem]">Bonjour {pseudo},</h1>
+            <p className="texte-degrade mt-1 font-display text-[1.9rem] leading-tight sm:text-[2.5rem]">Prêt à faire évoluer ton raisonnement&nbsp;?</p>
+            <p className="mt-titre max-w-xl text-[17px] leading-relaxed text-text/70">
+              Ici, tu n&apos;apprends pas seulement des algorithmes. Tu les observes, tu les manipules, tu les fais vivre.
             </p>
-            <p className="mt-[clamp(0.4rem,1.2vh,0.9rem)] max-w-lg text-[15px] text-muted">
-              Ici, tu n&apos;apprends pas seulement des algorithmes.
-              <br />
-              Tu les observes, tu les manipules, tu les fais vivre.
-            </p>
+            <ul className="mt-bloc flex flex-wrap gap-2.5 text-[15px]">
+              <li className="flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2">
+                <Gauge size={17} className="text-primary" />
+                Test de niveau&nbsp;: <strong className="font-semibold">{cockpit.calibrage.statut === "terminee" ? "terminé" : cockpit.calibrage.statut === "en_cours" ? "en cours" : "à faire"}</strong>
+              </li>
+              <li className="flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2">
+                <Compass size={17} className="text-primary" />
+                {cockpit.prochaine_notion ? (
+                  <>
+                    Notion du moment&nbsp;: <strong className="font-semibold">{LIBELLES_NOTION[cockpit.prochaine_notion]}</strong>
+                  </>
+                ) : (
+                  <strong className="font-semibold">Toutes les notions sont au vert</strong>
+                )}
+              </li>
+            </ul>
           </div>
-          <div className="relative hidden shrink-0 md:block">
-            <Annotation fleche="droite" className="absolute -left-36 top-2 z-10 hidden max-w-[10rem] text-lg xl:inline-flex">
+          <div className="relative hidden md:block lg:mt-10">
+            <AtelierAlgo className="w-full" />
+            <Annotation fleche="droite" className="absolute -left-10 bottom-0 z-10 hidden max-w-[11rem] text-xl xl:inline-flex">
               chaque étape te rapproche de ta prochaine notion&nbsp;!
             </Annotation>
-            <AtelierAlgo className="aspect-[8/5] h-[clamp(9rem,24vh,15rem)] w-auto" />
           </div>
         </section>
 
-        <div className="flex min-w-0 flex-col gap-[clamp(0.9rem,2.4vh,1.75rem)]">
+        <div className="flex min-w-0 flex-col gap-section">
           <ExperienceEnCours experience={experience} />
           <AutresExplorations exercices={cockpit.exercices} carte={cockpit.carte} courante={courante} prochaine={cockpit.prochaine_notion} />
-          <p className="flex items-center gap-2 font-hand text-lg text-primary">
+          <p className="flex items-center gap-2 font-hand text-xl text-primary">
             <svg width="56" height="18" viewBox="0 0 56 18" aria-hidden>
               <path d="M2 12 C 10 2, 16 18, 24 8 S 40 4, 54 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
@@ -158,7 +127,7 @@ export default function MonEspace() {
           </p>
         </div>
 
-        <aside className="flex flex-col gap-[clamp(0.6rem,1.6vh,1rem)]" aria-label="Ma progression et la suite">
+        <aside className="flex flex-col gap-bloc" aria-label="Ma progression et la suite">
           <MaProgression carte={cockpit.carte} debloquees={cockpit.notions_debloquees} recompenses={cockpit.recompenses.length} />
           <ProchaineEtape cockpit={cockpit} />
           <Motivation />

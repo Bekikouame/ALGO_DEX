@@ -41,7 +41,7 @@ export default function CoursAlgorithmique() {
 
   return (
     <CoqueRessources pseudo={pseudo}>
-      <div className="grid gap-x-8 gap-y-10 xl:grid-cols-[minmax(0,1fr)_19rem] 2xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid gap-section xl:grid-cols-[minmax(0,1fr)_19rem] 2xl:grid-cols-[minmax(0,1fr)_20rem]">
         {/* ---------------------------------------------------------------- héros */}
         <section aria-labelledby="titre-cours" className="relative xl:col-start-1">
           <Link href="/ressources" className="inline-flex items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-primary">
@@ -89,12 +89,12 @@ export default function CoursAlgorithmique() {
         </section>
 
         {/* ---------------------------------------------------------------- colonne de droite */}
-        <aside className="flex flex-col gap-5 xl:col-start-2 xl:row-span-3 xl:row-start-1" aria-label="Ton avancement">
+        <aside className="flex flex-col gap-bloc xl:col-start-2 xl:row-span-3 xl:row-start-1" aria-label="Ton avancement">
           <CarteProgression lecture={lecture} />
           <ContenuDuCours lecture={lecture} />
           <div className="card overflow-hidden p-0">
             <MontagneObjectif atteintes={lecture.termines?.length ?? 0} className="w-full" />
-            <div className="px-5 pb-5">
+            <div className="px-carte pb-carte">
               <p className="font-hand text-[22px] leading-6 text-lavande">Chaque chapitre t&apos;approche de ton objectif&nbsp;!</p>
               <Link
                 href="/ressources"
@@ -111,8 +111,8 @@ export default function CoursAlgorithmique() {
           <h2 id="titre-apercu" className="font-display text-[1.9rem] text-text">
             Aperçu du cours
           </h2>
-          <div className="card mt-4 grid gap-0 overflow-hidden p-0 md:grid-cols-2">
-            <div className="relative p-6 sm:p-7">
+          <div className="card mt-bloc grid gap-0 overflow-hidden p-0 md:grid-cols-2">
+            <div className="relative p-carte">
               <h3 className="text-lg font-bold">Pourquoi apprendre l&apos;algorithmique&nbsp;?</h3>
               <p className="mt-3 leading-relaxed text-text/75">
                 L&apos;algorithmique est l&apos;art de résoudre un problème étape par étape. Avant d&apos;écrire la moindre ligne de code, on
@@ -125,7 +125,7 @@ export default function CoursAlgorithmique() {
               </p>
               <p className="mt-5 -rotate-2 font-hand text-[22px] leading-6 text-primary">Le langage change, la logique reste&nbsp;!</p>
             </div>
-            <div className="border-t border-border bg-surface-2/40 p-6 sm:p-7 md:border-l md:border-t-0">
+            <div className="border-t border-border bg-surface-2/40 p-carte md:border-l md:border-t-0">
               <h3 className="text-lg font-bold">Ce que tu vas apprendre</h3>
               <ul className="mt-4 flex flex-col gap-3">
                 {APPRENTISSAGES.map((a) => (
@@ -153,14 +153,14 @@ export default function CoursAlgorithmique() {
           <h2 id="titre-chapitres" className="font-display text-[1.9rem] text-text">
             Les chapitres du cours
           </h2>
-          <ol className="mt-4 grid gap-5 sm:grid-cols-2 2xl:grid-cols-4">
+          <ol className="mt-bloc grid gap-bloc sm:grid-cols-2 2xl:grid-cols-4">
             {CHAPITRES.map((c) => {
               const statut = lecture.statut(c.slug);
               return (
                 <li key={c.slug}>
                   <Link
                     href={`/ressources/algorithmique/${c.slug}`}
-                    className="card group flex h-full flex-col p-5 transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_18px_40px_-20px_var(--primary)]"
+                    className="card group flex h-full flex-col p-carte transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_18px_40px_-20px_var(--primary)]"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-display text-3xl text-primary/90">{String(c.numero).padStart(2, "0")}</span>
@@ -197,7 +197,7 @@ function CarteProgression({ lecture }: { lecture: LectureCours }) {
   const rayon = 34;
   const tour = 2 * Math.PI * rayon;
   return (
-    <section className="card p-5" aria-labelledby="titre-progression">
+    <section className="card p-carte" aria-labelledby="titre-progression">
       <h2 id="titre-progression" className="text-[17px] font-bold">
         Ta progression
       </h2>
@@ -234,7 +234,7 @@ function CarteProgression({ lecture }: { lecture: LectureCours }) {
 function ContenuDuCours({ lecture }: { lecture: LectureCours }) {
   const aCommence = !!lecture.termines?.length;
   return (
-    <section className="card p-5" aria-labelledby="titre-contenu">
+    <section className="card p-carte" aria-labelledby="titre-contenu">
       <h2 id="titre-contenu" className="text-[17px] font-bold">
         Contenu du cours
       </h2>

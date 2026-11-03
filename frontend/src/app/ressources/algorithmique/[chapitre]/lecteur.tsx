@@ -45,7 +45,7 @@ export function LecteurChapitre() {
 
   return (
     <CoqueRessources pseudo={pseudo}>
-      <div className="grid gap-x-10 gap-y-8 xl:grid-cols-[minmax(0,1fr)_17rem]">
+      <div className="grid gap-section xl:grid-cols-[minmax(0,1fr)_17rem]">
         <article className="min-w-0 max-w-3xl">
           <Link href="/ressources/algorithmique" className="inline-flex items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-primary">
             <ArrowLeft size={16} /> Retour au cours
@@ -71,7 +71,7 @@ export function LecteurChapitre() {
             </div>
           </header>
 
-          <div className="card mt-7 p-5">
+          <div className="card mt-section p-carte">
             <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-primary">
               <Target size={16} /> Objectifs
             </h2>
@@ -86,7 +86,7 @@ export function LecteurChapitre() {
 
           {/* sections */}
           {chapitre.sections.map((s) => (
-            <section key={s.id} id={s.id} className="mt-10 scroll-mt-24" aria-labelledby={`titre-${s.id}`}>
+            <section key={s.id} id={s.id} className="mt-section scroll-mt-24" aria-labelledby={`titre-${s.id}`}>
               <h2 id={`titre-${s.id}`} className="font-display text-[1.75rem] leading-tight">
                 {s.titre}
               </h2>
@@ -99,12 +99,12 @@ export function LecteurChapitre() {
           ))}
 
           {/* entraînement réel */}
-          <section id="epreuve" className="mt-12 scroll-mt-24" aria-labelledby="titre-epreuve">
+          <section id="epreuve" className="mt-section scroll-mt-24" aria-labelledby="titre-epreuve">
             <h2 id="titre-epreuve" className="font-display text-[1.75rem] leading-tight">
               Mets-toi à l&apos;épreuve
             </h2>
             {chapitre.notions.length === 0 ? (
-              <div className="card mt-4 flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+              <div className="card mt-bloc flex flex-col gap-bloc p-carte sm:flex-row sm:items-center">
                 <p className="flex-1 text-text/80">
                   Ce chapitre n&apos;a pas d&apos;exercice dans le laboratoire. Le test de niveau te fait lire et dérouler de vrais algorithmes : un bon
                   moyen de vérifier où tu en es.
@@ -121,7 +121,7 @@ export function LecteurChapitre() {
                 </p>
                 {erreur && <p className="mt-3 text-sm text-danger">Les exercices n&apos;ont pas pu être chargés.</p>}
                 {!bibliotheque && !erreur && <p className="mt-3 text-sm text-muted">Chargement des exercices…</p>}
-                <ul className="mt-4 grid gap-4 sm:grid-cols-2">
+                <ul className="mt-bloc grid gap-bloc sm:grid-cols-2">
                   {exercices.map((e) => (
                     <li key={e.id}>
                       <CarteExercice exercice={e} avecChapitre={false} />
@@ -148,7 +148,7 @@ export function LecteurChapitre() {
           </section>
 
           {/* fin de chapitre */}
-          <div className="card mt-10 flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+          <div className="card mt-section flex flex-col gap-bloc p-carte sm:flex-row sm:items-center">
             <div className="flex-1">
               <p className="font-semibold">{termine ? "Chapitre terminé, bravo !" : "Tu as tout lu et essayé les exercices ?"}</p>
               <p className="font-hand text-xl text-primary">{termine ? "Une étape de plus vers le sommet !" : "Prends ton temps, relis si besoin."}</p>
@@ -195,7 +195,7 @@ export function LecteurChapitre() {
         {/* sommaire */}
         <aside className="hidden xl:block" aria-label="Sommaire du chapitre">
           <div className="sticky top-24 flex flex-col gap-4">
-            <nav className="card p-5">
+            <nav className="card p-carte">
               <h2 className="text-sm font-bold uppercase tracking-wider text-muted">Dans ce chapitre</h2>
               <ol className="mt-3 flex flex-col gap-1 border-l border-border">
                 {[...chapitre.sections, { id: "epreuve", titre: "Mets-toi à l'épreuve" }].map((s) => (
@@ -207,7 +207,7 @@ export function LecteurChapitre() {
                 ))}
               </ol>
             </nav>
-            <nav className="card p-5" aria-label="Chapitres du cours">
+            <nav className="card p-carte" aria-label="Chapitres du cours">
               <h2 className="text-sm font-bold uppercase tracking-wider text-muted">Le cours</h2>
               <ol className="mt-3 flex flex-col gap-1.5">
                 {CHAPITRES.map((c) => (
@@ -375,7 +375,7 @@ function BlocCours({ bloc }: { bloc: Bloc }) {
       );
     case "exercice":
       return (
-        <div className="card p-5">
+        <div className="card p-carte">
           <p className="text-xs font-bold uppercase tracking-wider text-primary">Exercice</p>
           <h3 className="mt-1 text-lg font-bold">{bloc.titre}</h3>
           <p className="mt-2 leading-relaxed text-text/80">

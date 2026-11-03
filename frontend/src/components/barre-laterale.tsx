@@ -1,9 +1,9 @@
 "use client";
 
-import { BookOpen, ChevronRight, Gauge, House, Menu, PanelLeftClose, PanelLeftOpen, Route, Telescope, X } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronRight, Gauge, House, Menu, PanelLeftClose, PanelLeftOpen, Route, Telescope, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { quitterProfil } from "@/lib/profils";
 import { RobotAlgo } from "./espace/illustrations";
 import { Avatar, Logo, Marque } from "./marque";
@@ -14,8 +14,13 @@ interface SousRubrique {
   actifSur?: string;
 }
 
+interface GroupeSousMenu {
+  groupe: string;
+  rubriques: SousRubrique[];
+}
+
 // « Parcours » et « Exploration » sont des sections de Mon espace ; « Ressources » regroupe le cours et la documentation.
-export const NAVIGATION: { href: string; libelle: string; icone: typeof House; actifSur?: string[]; sousMenu?: SousRubrique[] }[] = [
+export const NAVIGATION: { href: string; libelle: string; icone: typeof House; actifSur?: string[]; sousMenu?: GroupeSousMenu[] }[] = [
   { href: "/parcours", libelle: "Mon espace", icone: House },
   { href: "/parcours#progression", libelle: "Parcours", icone: Route },
   { href: "/calibrage", libelle: "Test de niveau", icone: Gauge },
@@ -26,10 +31,15 @@ export const NAVIGATION: { href: string; libelle: string; icone: typeof House; a
     icone: BookOpen,
     actifSur: ["/ressources", "/langages"],
     sousMenu: [
-      { href: "/ressources/algorithmique", libelle: "Cours Algorithme", actifSur: "/ressources/algorithmique" },
-      { href: "/langages", libelle: "Documentation", actifSur: "/langages" },
-      { href: "/ressources/exercices", libelle: "Exercices", actifSur: "/ressources/exercices" },
-      { href: null, libelle: "Blog" },
+      {
+        groupe: "Apprendre",
+        rubriques: [
+          { href: "/ressources/algorithmique", libelle: "Cours d'algorithmique", actifSur: "/ressources/algorithmique" },
+          { href: "/langages", libelle: "Documentation", actifSur: "/langages" },
+        ],
+      },
+      { groupe: "Pratiquer", rubriques: [{ href: "/ressources/exercices", libelle: "Exercices", actifSur: "/ressources/exercices" }] },
+      { groupe: "S'inspirer", rubriques: [{ href: null, libelle: "Blog" }] },
     ],
   },
 ];
@@ -84,31 +94,83 @@ const commencePar = (chemin: string, prefixe: string) => chemin === prefixe || c
 const estActif = (chemin: string, { href, actifSur }: (typeof NAVIGATION)[number]) =>
   actifSur ? actifSur.some((p) => commencePar(chemin, p)) : !href.includes("#") && chemin === href;
 
-/** Les sous-rubriques de la rubrique active, reliées par un fil vertical. */
-function SousMenu({ rubriques, chemin, onChoisir, tabIndex }: { rubriques: SousRubrique[]; chemin: string; onChoisir?: () => void; tabIndex?: number }) {
+/**
+ * Les sous-rubriques de la rubrique active, par groupes (Apprendre, Pratiquer, S'inspirer).
+ * Le bloc se déplie et se replie en douceur ; le retrait et le fil vertical le rattachent à sa rubrique.
+ */
+function SousMenu({
+  groupes,
+  chemin,
+  ouvert,
+  id,
+  onChoisir,
+  tabIndex,
+}: {
+  groupes: GroupeSousMenu[];
+  chemin: string;
+  ouvert: boolean;
+  id: string;
+  onChoisir?: () => void;
+  tabIndex?: number;
+}) {
+  const focus = ouvert ? tabIndex : -1;
   return (
-    <ul className="relative ml-[1.6rem] mt-1 flex flex-col gap-0.5 border-l border-border pl-3">
-      {rubriques.map(({ href, libelle, actifSur }) => {
-        const actif = !!actifSur && commencePar(chemin, actifSur);
-        const classe = `relative flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-colors before:absolute before:-left-[0.8rem] before:top-1/2 before:h-1.5 before:w-1.5 before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full ${
-          actif ? "bg-primary/10 font-semibold text-primary before:bg-primary" : "text-text/70 before:bg-border hover:text-primary"
-        }`;
-        return (
-          <li key={libelle}>
-            {href ? (
-              <Link href={href} onClick={onChoisir} tabIndex={tabIndex} aria-current={actif ? "page" : undefined} className={classe}>
-                {libelle}
-              </Link>
-            ) : (
-              <span className={`${classe} cursor-default opacity-60`} aria-disabled>
-                {libelle}
-                <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-muted">bientôt</span>
-              </span>
-            )}
-          </li>
-        );
-      })}
-    </ul>
+    <div
+      id={id}
+      className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${ouvert ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+      aria-hidden={!ouvert}
+    >
+      <div className="min-h-0 overflow-hidden">
+        <div className="ml-[1.15rem] mt-2 flex flex-col border-l border-border pb-1 pl-2.5">
+          {groupes.map(({ groupe, rubriques }, g) => (
+            <div key={groupe} className={g > 0 ? "mt-3 border-t border-border/70 pt-3" : ""}>
+              <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-muted/80">{groupe}</p>
+              <ul className="flex flex-col gap-sous">
+                {rubriques.map(({ href, libelle, actifSur }) => {
+                  const actif = !!actifSur && commencePar(chemin, actifSur);
+                  const classe = `relative flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-[14.5px] transition-colors before:absolute before:-left-2.5 before:top-1/2 before:h-4 before:w-[3px] before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full ${
+                    actif ? "bg-primary/10 font-semibold text-primary before:bg-primary" : "text-text/75 before:bg-transparent hover:bg-primary/5 hover:text-primary"
+                  }`;
+                  return (
+                    <li key={libelle}>
+                      {href ? (
+                        <Link href={href} onClick={onChoisir} tabIndex={focus} aria-current={actif ? "page" : undefined} className={classe}>
+                          {libelle}
+                        </Link>
+                      ) : (
+                        <span className={`${classe} cursor-default justify-between text-text/55`} aria-disabled>
+                          {libelle}
+                          <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-muted">bientôt</span>
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Le chevron qui déplie ou replie les sous-rubriques. */
+function Chevron({ ouvert, controle, onBasculer, sombre, tabIndex }: { ouvert: boolean; controle: string; onBasculer: () => void; sombre: boolean; tabIndex?: number }) {
+  return (
+    <button
+      type="button"
+      onClick={onBasculer}
+      tabIndex={tabIndex}
+      aria-expanded={ouvert}
+      aria-controls={controle}
+      aria-label={ouvert ? "Replier les ressources" : "Déplier les ressources"}
+      className={`absolute right-2 top-6 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg transition-colors ${
+        sombre ? "text-on-primary/85 hover:bg-white/15" : "text-muted hover:bg-primary/10 hover:text-primary"
+      }`}
+    >
+      <ChevronDown size={17} className={`transition-transform duration-300 ${ouvert ? "rotate-180" : ""}`} />
+    </button>
   );
 }
 
@@ -142,6 +204,9 @@ export function BarreLaterale({
   const [mode, basculer] = useModeBarre(compacteParDefaut);
   const changerProfil = useChangerProfil();
   const compacte = mode === "compacte";
+  // Le sous-menu de Ressources : ouvert dans sa section, repliable par son chevron.
+  const [replie, setReplie] = useState(false);
+  const sousMenuOuvert = !compacte && !replie && NAVIGATION.some((r) => r.sousMenu && estActif(chemin, r));
   // Libellés : ils s'effacent pendant que la barre se replie, sans quitter l'arbre d'accessibilité.
   const libelle = `overflow-hidden whitespace-nowrap transition-[opacity,max-width] duration-300 ${compacte ? "max-w-0 opacity-0" : "max-w-[11rem] opacity-100"}`;
 
@@ -168,18 +233,22 @@ export function BarreLaterale({
         </button>
       </div>
 
-      <nav className={`flex flex-col gap-1.5 ${compacte ? "mt-6 items-center" : "mt-9"}`} aria-label="Navigation principale">
+      <nav
+        className={`-mx-2 flex min-h-0 flex-col gap-1.5 overflow-y-auto px-2 pb-2 ${compacte ? "mt-6 items-center" : "mt-8"}`}
+        aria-label="Navigation principale"
+      >
         {NAVIGATION.map((rubrique) => {
           const { href, libelle: nom, icone: Icone, sousMenu } = rubrique;
           const actif = estActif(chemin, rubrique);
+          const avecChevron = actif && !!sousMenu && !compacte;
           return (
-            <div key={href} className={compacte ? "" : "flex flex-col"}>
+            <div key={href} className={compacte ? "" : "relative flex flex-col"}>
               <Link
                 href={href}
                 aria-current={actif ? "page" : undefined}
                 aria-label={compacte ? nom : undefined}
                 className={`group relative flex items-center rounded-2xl text-[15px] font-medium transition-all duration-300 ${
-                  compacte ? "h-11 w-11 justify-center" : "gap-3 px-4 py-3"
+                  compacte ? "h-11 w-11 justify-center" : `gap-3 px-4 py-3 ${avecChevron ? "pr-12" : ""}`
                 } ${
                   actif
                     ? "actif-pop bg-primary text-on-primary shadow-[0_12px_28px_-12px_var(--primary)]"
@@ -190,7 +259,8 @@ export function BarreLaterale({
                 <span className={libelle}>{nom}</span>
                 {compacte && <Bulle>{nom}</Bulle>}
               </Link>
-              {actif && sousMenu && !compacte && <SousMenu rubriques={sousMenu} chemin={chemin} />}
+              {avecChevron && <Chevron ouvert={sousMenuOuvert} controle="sous-menu-barre" onBasculer={() => setReplie((x) => !x)} sombre />}
+              {sousMenu && actif && !compacte && <SousMenu groupes={sousMenu} chemin={chemin} ouvert={sousMenuOuvert} id="sous-menu-barre" />}
             </div>
           );
         })}
@@ -199,7 +269,9 @@ export function BarreLaterale({
       <div className={`mt-auto flex flex-col gap-3 ${compacte ? "items-center" : ""}`}>
         {/* Le robot, seulement quand la barre est développée et que la hauteur le permet */}
         {!compacte && (
-          <div className="relative hidden items-end justify-center pt-10 [@media(min-height:720px)]:flex">
+          <div
+            className={`relative hidden items-end justify-center pt-10 ${sousMenuOuvert ? "[@media(min-height:940px)]:flex" : "[@media(min-height:720px)]:flex"}`}
+          >
             <span className="absolute right-0 top-0 max-w-[8.5rem] -rotate-6 text-center font-hand text-xl leading-5 text-primary">
               {annotation}
             </span>
@@ -270,6 +342,7 @@ export function BoutonMenu({ onOuvrir }: { onOuvrir: () => void }) {
 export function MenuMobile({ ouvert, onFermer, pseudo }: { ouvert: boolean; onFermer: () => void; pseudo?: string }) {
   const chemin = usePathname();
   const changerProfil = useChangerProfil();
+  const [replie, setReplie] = useState(false);
 
   useEffect(() => {
     if (!ouvert) return;
@@ -297,25 +370,30 @@ export function MenuMobile({ ouvert, onFermer, pseudo }: { ouvert: boolean; onFe
             <X size={20} />
           </button>
         </div>
-        <nav className="mt-8 flex flex-col gap-1.5" aria-label="Navigation principale">
+        <nav className="-mx-2 mt-8 flex min-h-0 flex-col gap-1.5 overflow-y-auto px-2 pb-2" aria-label="Navigation principale">
           {NAVIGATION.map((rubrique) => {
             const { href, libelle, icone: Icone, sousMenu } = rubrique;
             const actif = estActif(chemin, rubrique);
             return (
-              <div key={href} className="flex flex-col">
+              <div key={href} className="relative flex flex-col">
                 <Link
                   href={href}
                   onClick={onFermer}
                   tabIndex={ouvert ? 0 : -1}
                   aria-current={actif ? "page" : undefined}
-                  className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-[15px] font-medium ${
+                  className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-[15px] font-medium ${actif && sousMenu ? "pr-12" : ""} ${
                     actif ? "bg-primary text-on-primary" : "text-text/80 hover:bg-primary/8 hover:text-primary"
                   }`}
                 >
                   <Icone size={19} strokeWidth={1.8} />
                   {libelle}
                 </Link>
-                {actif && sousMenu && <SousMenu rubriques={sousMenu} chemin={chemin} onChoisir={onFermer} tabIndex={ouvert ? 0 : -1} />}
+                {actif && sousMenu && (
+                  <>
+                    <Chevron ouvert={!replie} controle="sous-menu-mobile" onBasculer={() => setReplie((x) => !x)} sombre tabIndex={ouvert ? 0 : -1} />
+                    <SousMenu groupes={sousMenu} chemin={chemin} ouvert={!replie} id="sous-menu-mobile" onChoisir={onFermer} tabIndex={ouvert ? 0 : -1} />
+                  </>
+                )}
               </div>
             );
           })}

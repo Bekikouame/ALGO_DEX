@@ -7,11 +7,9 @@ import { MessageErreur } from "@/components/coque";
 import { Avatar } from "@/components/marque";
 import { api, type Profil } from "@/lib/api";
 import { idsAppareil, memoriserProfil, oublierProfil } from "@/lib/profils";
+import { nettoyerPseudo, verifierPseudo } from "@/lib/pseudo";
 
 export type VueDemarrage = "nouveau" | "reprendre";
-
-// Mêmes règles que le moteur : caractères de contrôle retirés, espaces resserrés, 2 à 40 caractères.
-const nettoyer = (pseudo: string) => pseudo.replace(/\p{Cc}/gu, "").replace(/\s+/g, " ").trim();
 
 /** Le panneau « Prêt à commencer ? » de l'en-tête : un pseudo crée le profil et lance le test de niveau, ou l'on reprend un profil de cet appareil. */
 export function Demarrage({
@@ -28,6 +26,11 @@ export function Demarrage({
   const [pseudo, setPseudo] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
+  // Le format est vérifié pendant la saisie ; le serveur refait la même vérification.
+  const propre = nettoyerPseudo(pseudo);
+  const probleme = propre ? verifierPseudo(propre) : null;
+  // Une seule lettre tapée : on attend la suite avant de parler de longueur.
+  const avertissement = probleme && !(propre.length < 2 && probleme.includes("entre 2 et 40")) ? probleme : null;
 
   useEffect(() => {
     const ids = idsAppareil();
@@ -41,9 +44,9 @@ export function Demarrage({
 
   async function creer(e: FormEvent) {
     e.preventDefault();
-    const propre = nettoyer(pseudo);
-    if (propre.length < 2 || propre.length > 40) {
-      setErreur("Le pseudo doit faire entre 2 et 40 caractères.");
+    const message = verifierPseudo(propre);
+    if (message) {
+      setErreur(message);
       return;
     }
     setErreur(null);
@@ -96,17 +99,22 @@ export function Demarrage({
             <input
               id="pseudo"
               value={pseudo}
-              onChange={(e) => setPseudo(e.target.value)}
+              onChange={(e) => {
+                setPseudo(e.target.value);
+                setErreur(null);
+              }}
               maxLength={60}
-              placeholder="Ex. Alex"
+              placeholder="Ex. becca_12"
               autoComplete="off"
               aria-describedby="pseudo-aide"
-              aria-invalid={!!erreur || undefined}
-              className="w-full rounded-xl border border-border bg-bg/70 py-3.5 pl-11 pr-4 outline-none transition-colors focus:border-primary"
+              aria-invalid={!!(erreur || avertissement) || undefined}
+              className={`w-full rounded-xl border bg-bg/70 py-3.5 pl-11 pr-4 outline-none transition-colors ${
+                avertissement ? "border-danger focus:border-danger" : "border-border focus:border-primary"
+              }`}
             />
           </div>
-          <p id="pseudo-aide" className="mt-2 text-xs text-muted">
-            2 à 40 caractères. Ni email, ni mot de passe.
+          <p id="pseudo-aide" className={`mt-2 text-xs ${avertissement && !erreur ? "text-danger" : "text-muted"}`} aria-live="polite">
+            {avertissement && !erreur ? avertissement : "2 à 40 caractères : lettres, chiffres, _ et @, sans espace."}
           </p>
           {erreur && (
             <div className="mt-3">

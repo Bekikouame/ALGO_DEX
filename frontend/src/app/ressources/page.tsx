@@ -44,10 +44,10 @@ export default function Ressources() {
       <h1 className="font-display text-[2.8rem] leading-none tracking-tight">Ressources</h1>
       <p className="mt-3 max-w-xl text-text/75">Tout pour apprendre à ton rythme : un cours complet, la documentation des langages et les exercices.</p>
 
-      <h2 className="mt-10 text-sm font-bold uppercase tracking-wider text-muted">Cours</h2>
+      <h2 className="mt-section text-sm font-bold uppercase tracking-wider text-muted">Cours</h2>
       <Link
         href="/ressources/algorithmique"
-        className="card group mt-3 grid items-center gap-6 overflow-hidden p-6 transition-colors hover:border-primary/40 md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]"
+        className="card group mt-titre grid items-center gap-bloc overflow-hidden p-carte transition-colors hover:border-primary/40 md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]"
       >
         <div>
           <span className="inline-flex rounded-lg bg-primary-soft px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-primary">Cours</span>
@@ -73,11 +73,11 @@ export default function Ressources() {
         <SceneCours className="hidden w-full md:block" />
       </Link>
 
-      <h2 className="mt-10 text-sm font-bold uppercase tracking-wider text-muted">Et aussi</h2>
-      <ul className="mt-3 grid gap-4 md:grid-cols-3">
+      <h2 className="mt-section text-sm font-bold uppercase tracking-wider text-muted">Et aussi</h2>
+      <ul className="mt-titre grid gap-bloc md:grid-cols-3">
         {AUTRES.map(({ href, icone: Icone, titre, texte }) => (
           <li key={href}>
-            <Link href={href} className="card flex h-full flex-col p-5 transition-colors hover:border-primary/40">
+            <Link href={href} className="card flex h-full flex-col p-carte transition-colors hover:border-primary/40">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-soft text-primary">
                 <Icone size={19} />
               </span>
@@ -87,7 +87,7 @@ export default function Ressources() {
           </li>
         ))}
         <li>
-          <div className="card flex h-full flex-col p-5 opacity-60" aria-disabled>
+          <div className="card flex h-full flex-col p-carte opacity-60" aria-disabled>
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-muted">
               <Newspaper size={19} />
             </span>

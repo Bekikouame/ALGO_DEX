@@ -1,0 +1,76 @@
+# ALGO_DEX en production : Caddy (HTTPS) → site Next → moteur Django → PostgreSQL.
+# Seul Caddy est exposé (ports 80 et 443). Variables : fichier .env à côté (voir .env.example).
+
+services:
+  base:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-algodex}
+      POSTGRES_USER: ${POSTGRES_USER:-algodex}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant dans .env}
+    volumes:
+      - donnees:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  moteur:
+    build: ./django-docker
+    restart: unless-stopped
+    depends_on:
+      base:
+        condition: service_healthy
+    environment:
+      DJANGO_DEBUG: "0"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY manquant dans .env}
+      # « moteur » : l'hôte que le site Next utilise pour relayer /api/*.
+      DJANGO_ALLOWED_HOSTS: ${DOMAINE:?DOMAINE manquant dans .env},moteur
+      DJANGO_CSRF_TRUSTED_ORIGINS: https://${DOMAINE}
+      DJANGO_CHEMIN_ADMIN: ${DJANGO_CHEMIN_ADMIN:-gestion-algodex/}
+      # HTTPS est géré par Caddy ; Django ne redirige pas lui-même (le relais Next parle en http).
+      DJANGO_DERRIERE_HTTPS: "1"
+      DJANGO_REDIRECTION_HTTPS: "0"
+      # Caddy puis Next devant Django.
+      DJANGO_NB_PROXIES: "2"
+      POSTGRES_DB: ${POSTGRES_DB:-algodex}
+      POSTGRES_USER: ${POSTGRES_USER:-algodex}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: base
+      POSTGRES_PORT: "5432"
+    expose:
+      - "8000"
+
+  site:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_URL: http://moteur:8000
+    restart: unless-stopped
+    depends_on:
+      - moteur
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - site
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAINE: ${DOMAINE}
+      DJANGO_CHEMIN_ADMIN: ${DJANGO_CHEMIN_ADMIN:-gestion-algodex/}
+    volumes:
+      - ./deploiement/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_donnees:/data
+      - caddy_config:/config
+
+volumes:
+  donnees:
+  caddy_donnees:
+  caddy_config:

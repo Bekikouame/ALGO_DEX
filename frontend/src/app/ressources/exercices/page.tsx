@@ -58,7 +58,7 @@ export default function BibliothequeExercices() {
           </p>
         </div>
         {exercices && (
-          <div className="card flex items-center gap-4 px-5 py-4">
+          <div className="card flex items-center gap-4 px-carte py-4">
             <div>
               <p className="text-2xl font-extrabold">
                 {reussis} <span className="text-base font-semibold text-muted">/ {tous.length}</span>
@@ -73,7 +73,7 @@ export default function BibliothequeExercices() {
       </div>
 
       {/* notions */}
-      <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4" role="tablist" aria-label="Notions">
+      <div className="mt-section grid grid-cols-2 gap-icone lg:grid-cols-4" role="tablist" aria-label="Notions">
         {NOTIONS.map((n) => {
           const liste = tous.filter((e) => e.notion === n);
           const choisie = notion === n;
@@ -133,14 +133,14 @@ export default function BibliothequeExercices() {
           <MessageErreur message={erreur} />
         </div>
       )}
-      {!exercices && !erreur && <p className="mt-8 text-muted">Chargement de la bibliothèque…</p>}
+      {!exercices && !erreur && <p className="mt-section text-muted">Chargement de la bibliothèque…</p>}
 
       {/* exercices, groupés par notion */}
       {exercices &&
         NOTIONS.filter((n) => visibles.some((e) => e.notion === n)).map((n) => {
           const chapitre = chapitreDeNotion(n);
           return (
-            <section key={n} className="mt-10" aria-labelledby={`notion-${n}`}>
+            <section key={n} className="mt-section" aria-labelledby={`notion-${n}`}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 id={`notion-${n}`} className="font-display text-[1.8rem]">
                   {LIBELLES_NOTION[n]}
@@ -151,7 +151,7 @@ export default function BibliothequeExercices() {
                   </Link>
                 )}
               </div>
-              <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              <ul className="mt-bloc grid gap-bloc sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {visibles
                   .filter((e) => e.notion === n)
                   .map((e) => (
@@ -163,7 +163,7 @@ export default function BibliothequeExercices() {
             </section>
           );
         })}
-      {exercices && visibles.length === 0 && <p className="mt-10 text-center text-muted">Aucun exercice ne correspond à ces filtres.</p>}
+      {exercices && visibles.length === 0 && <p className="mt-section text-center text-muted">Aucun exercice ne correspond à ces filtres.</p>}
     </CoqueRessources>
   );
 }

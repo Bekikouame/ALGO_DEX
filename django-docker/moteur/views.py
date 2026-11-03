@@ -14,6 +14,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView, exception_handler
 
 from . import interpreteur, regles
@@ -43,11 +44,28 @@ def gestionnaire_erreurs(exc, context):
     return exception_handler(exc, context)
 
 
+class LimiteApprenant(AnonRateThrottle):
+    """Toutes les routes apprenant : une limite large par adresse IP, contre les rafales automatisées."""
+
+    scope = "apprenant"
+
+
+class LimiteCreationProfil(AnonRateThrottle):
+    """Création de profil : plus stricte, pour éviter qu'un script remplisse la base de pseudos."""
+
+    scope = "creation_profil"
+
+
 class VueApprenant(APIView):
     """Le cockpit appelle ces routes sans compte : le pseudo suffit (ARCH-1)."""
 
     authentication_classes = []
     permission_classes = [AllowAny]
+    throttle_classes = [LimiteApprenant]
+
+
+# Un appareil garde quelques profils ; au-delà, la demande n'a pas de sens.
+MAX_PROFILS_PAR_DEMANDE = 20
 
 
 def _valider(serializer_class, data):
@@ -62,6 +80,12 @@ def _valider(serializer_class, data):
 
 
 class ProfilView(VueApprenant):
+    def get_throttles(self):
+        limites = super().get_throttles()
+        if self.request.method == "POST":
+            limites.append(LimiteCreationProfil())
+        return limites
+
     @extend_schema(
         tags=["profil"],
         summary="Profils de l'appareil",
@@ -71,7 +95,10 @@ class ProfilView(VueApprenant):
     )
     def get(self, request):
         ids = []
-        for brut in filter(None, (s.strip() for s in request.query_params.get("ids", "").split(","))):
+        bruts = [s.strip() for s in request.query_params.get("ids", "").split(",") if s.strip()]
+        if len(bruts) > MAX_PROFILS_PAR_DEMANDE:
+            return Response({"detail": f"{MAX_PROFILS_PAR_DEMANDE} profils au plus par demande."}, status=400)
+        for brut in bruts:
             try:
                 ids.append(uuid.UUID(brut))
             except ValueError:

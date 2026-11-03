@@ -31,7 +31,7 @@ export function Coque({
 
       <div className="relative flex min-w-0 flex-1 flex-col lg:h-screen lg:overflow-y-auto lg:scroll-smooth motion-reduce:scroll-auto">
         <header
-          className={`flex items-center gap-3 px-4 py-4 sm:px-8 ${enTeteFlottant ? "lg:absolute lg:right-0 lg:top-0 lg:z-30 lg:pt-5" : "lg:pt-6"}`}
+          className={`flex items-center gap-icone px-page py-4 ${enTeteFlottant ? "lg:absolute lg:right-0 lg:top-0 lg:z-30 lg:pt-5" : "lg:pt-6"}`}
         >
           <BoutonMenu onOuvrir={() => setMenuOuvert(true)} />
           <span className="md:hidden">
@@ -43,7 +43,7 @@ export function Coque({
             {pseudo && <Avatar pseudo={pseudo} taille={40} />}
           </div>
         </header>
-        <main className={`mx-auto w-full max-w-[88rem] flex-1 px-4 pb-12 pt-2 sm:px-8 ${enTeteFlottant ? "lg:pb-4 lg:pt-4" : ""}`}>{children}</main>
+        <main className={`mx-auto w-full max-w-[88rem] flex-1 px-page pb-section pt-2 ${enTeteFlottant ? "lg:pt-4" : ""}`}>{children}</main>
       </div>
     </div>
   );

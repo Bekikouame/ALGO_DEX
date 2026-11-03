@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,15 +22,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY", "django-insecure-)-fstkl_-q+$y058za2sy)vu&*mfehq9&2mz8wjz%q&zb7b_(y"
-)
-
-# SECURITY WARNING: don't run with debug turned on in production!
+# Développement par défaut. En production : DJANGO_DEBUG=0 et une vraie DJANGO_SECRET_KEY (voir .env.example).
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
+# La clé de développement est publique (elle est dans l'historique Git) : elle n'est jamais acceptée hors DEBUG.
+CLE_DEVELOPPEMENT = "django-insecure-)-fstkl_-q+$y058za2sy)vu&*mfehq9&2mz8wjz%q&zb7b_(y"
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or (CLE_DEVELOPPEMENT if DEBUG else "")
+if not DEBUG and (len(SECRET_KEY) < 50 or SECRET_KEY == CLE_DEVELOPPEMENT):
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY doit être définie (50 caractères ou plus) quand DJANGO_DEBUG=0.")
+
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o]
 
 
 # Application definition
@@ -47,6 +51,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Sert les fichiers statiques (CSS du back-office) sans serveur web à part.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -143,6 +149,34 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
+
+
+# Sécurité
+# Requêtes JSON du moteur : quelques kilo-octets ; au-delà, c'est un abus.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 512 * 1024
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 200
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+X_FRAME_OPTIONS = "DENY"
+SESSION_COOKIE_HTTPONLY = True
+
+if not DEBUG:
+    # Derrière HTTPS (reverse proxy qui renseigne X-Forwarded-Proto) : cookies et redirections sécurisés.
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    if os.environ.get("DJANGO_DERRIERE_HTTPS", "1") == "1":
+        SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+        SECURE_SSL_REDIRECT = os.environ.get("DJANGO_REDIRECTION_HTTPS", "1") == "1"
+        SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_HSTS_SECONDES", "31536000"))
+        SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+        SECURE_HSTS_PRELOAD = False
+
+# L'adresse du back-office : à changer en production pour éviter les robots qui visent /admin/.
+CHEMIN_ADMIN = os.environ.get("DJANGO_CHEMIN_ADMIN", "admin/")
 
 
 # API du moteur
@@ -155,6 +189,13 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.BasicAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAdminUser"],
+    # Limites par adresse IP (routes apprenant). Une classe entière peut partager une IP : limites larges.
+    "DEFAULT_THROTTLE_RATES": {
+        "apprenant": os.environ.get("DJANGO_LIMITE_APPRENANT", "600/min"),
+        "creation_profil": os.environ.get("DJANGO_LIMITE_CREATION_PROFIL", "60/hour"),
+    },
+    # Le navigateur passe par Next (/api/*), qui ajoute X-Forwarded-For : on lit l'IP réelle derrière ce relais.
+    "NUM_PROXIES": int(os.environ.get("DJANGO_NB_PROXIES", "1")),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "moteur.views.gestionnaire_erreurs",
 }
@@ -168,7 +209,8 @@ SPECTACULAR_SETTINGS = {
     ),
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
-    "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
+    # La documentation de l'API n'est publique qu'en développement.
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny" if DEBUG else "rest_framework.permissions.IsAdminUser"],
     "SWAGGER_UI_SETTINGS": {"persistAuthorization": True, "docExpansion": "none"},
 }
 
@@ -176,8 +218,11 @@ SPECTACULAR_SETTINGS = {
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
+# L'application n'envoie pas d'e-mails aujourd'hui ; en production, un vrai serveur SMTP si l'on en ajoute.
 MAILERS = {
     "default": {
-        "BACKEND": "django.core.mail.backends.console.EmailBackend",
+        "BACKEND": "django.core.mail.backends.console.EmailBackend"
+        if DEBUG
+        else "django.core.mail.backends.smtp.EmailBackend",
     },
 }

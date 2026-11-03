@@ -22,7 +22,7 @@ export function CoqueRessources({ pseudo, children }: { pseudo?: string; childre
       <MenuMobile ouvert={menuOuvert} onFermer={() => setMenuOuvert(false)} pseudo={pseudo} />
 
       <div className="relative flex min-w-0 flex-1 flex-col lg:h-screen lg:overflow-y-auto lg:scroll-smooth motion-reduce:scroll-auto">
-        <header className="sticky top-0 z-30 flex h-[68px] shrink-0 items-center gap-3 border-b border-border/70 bg-bg/85 px-4 backdrop-blur sm:px-8">
+        <header className="sticky top-0 z-30 flex h-[68px] shrink-0 items-center gap-icone border-b border-border/70 bg-bg/85 px-page backdrop-blur">
           <BoutonMenu onOuvrir={() => setMenuOuvert(true)} />
           <span className="md:hidden">
             <Marque sousTitre={false} />
@@ -33,7 +33,7 @@ export function CoqueRessources({ pseudo, children }: { pseudo?: string; childre
             {pseudo && <Avatar pseudo={pseudo} taille={40} />}
           </div>
         </header>
-        <main className="mx-auto w-full max-w-[96rem] flex-1 px-4 pb-14 pt-6 sm:px-8">{children}</main>
+        <main className="mx-auto w-full max-w-[96rem] flex-1 px-page pb-section pt-bloc">{children}</main>
       </div>
     </div>
   );

@@ -1,10 +1,13 @@
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.management import call_command
+from unittest.mock import patch
 from rest_framework.test import APITestCase
 
 from . import interpreteur
 from .interpreteur import BlocInvalide
 from .models import CarteMaitrise, Exercice, Tentative
+from .views import LimiteCreationProfil
 
 SOMME_TABLEAU = [
     {"type": "affectation", "variable": "s", "valeur": "0"},
@@ -64,6 +67,7 @@ class InterpreteurTests(APITestCase):
 
 class ParcoursTests(APITestCase):
     def setUp(self):
+        cache.clear()  # les compteurs de limites ne passent pas d'un test à l'autre
         call_command("charger_demo", stdout=open("/dev/null", "w"))
         self.profil = self.client.post("/api/profil", {"pseudo": "Alex"}, format="json").json()["id"]
 
@@ -119,6 +123,26 @@ class ParcoursTests(APITestCase):
         self.assertFalse(acces["Le PGCD d'Euclide"])
         self.assertEqual(self.ouvrir(Exercice.objects.get(titre="Le PGCD d'Euclide")).status_code, 403)
         self.assertEqual(self.ouvrir(Exercice.objects.get(titre="Des secondes en heures")).status_code, 201)
+
+    def test_format_pseudo(self):
+        creer = lambda p: self.client.post("/api/profil", {"pseudo": p}, format="json")
+        for valable in ["becca", "becc@", "becc__", "becc12", "@becca", "__moi", "Léa", "  bob  "]:
+            self.assertEqual(creer(valable).status_code, 201, valable)
+        for refuse in ["sans nom", "@@", "$$$", "123", "__", "be@c@", "b@@b", "becca!", "a", "x" * 41, "é-lo"]:
+            r = creer(refuse)
+            self.assertEqual(r.status_code, 400, refuse)
+        self.assertIn("espace", creer("sans nom").json()["detail"])
+        self.assertIn("au moins une lettre", creer("123").json()["detail"])
+        self.assertIn("Un seul @", creer("b@@b").json()["detail"])
+
+    def test_limites(self):
+        cache.clear()
+        # DRF lit les taux au chargement de la classe : on remplace ceux de la limite de création.
+        with patch.object(LimiteCreationProfil, "THROTTLE_RATES", {"creation_profil": "3/hour"}):
+            statuts = [self.client.post("/api/profil", {"pseudo": f"limite{n}"}, format="json").status_code for n in range(4)]
+        self.assertEqual(statuts, [201, 201, 201, 429])
+        ids = ",".join(["00000000-0000-0000-0000-000000000000"] * 21)
+        self.assertEqual(self.client.get(f"/api/profil?ids={ids}").status_code, 400)
 
     # -- calibrage (F1) --
 

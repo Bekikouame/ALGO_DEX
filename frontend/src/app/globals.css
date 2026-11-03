@@ -98,6 +98,40 @@
   --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", Menlo, monospace;
   --font-hand: var(--font-caveat), "Comic Sans MS", cursive;
   --shadow-card: var(--shadow);
+  --spacing-page: var(--espace-page);
+  --spacing-section: var(--espace-section);
+  --spacing-bloc: var(--espace-bloc);
+  --spacing-carte: var(--espace-carte);
+  --spacing-titre: var(--espace-titre);
+  --spacing-icone: var(--espace-icone);
+  --spacing-sous: var(--espace-sous);
+}
+
+/* Espacements de l'espace apprenant : une seule grille, resserrée sur les petits écrans.
+   page : marges de la zone principale · section : entre grandes sections · bloc : entre éléments d'une section
+   carte : intérieur des cartes · titre : titre → description · icone : icône → texte · sous : entre sous-rubriques */
+:root {
+  --espace-page: 1rem;
+  --espace-section: 1.75rem;
+  --espace-bloc: 1.25rem;
+  --espace-carte: 1.25rem;
+  --espace-titre: 0.625rem;
+  --espace-icone: 0.75rem;
+  --espace-sous: 0.5rem;
+}
+@media (min-width: 640px) {
+  :root {
+    --espace-page: 1.5rem;
+    --espace-carte: 1.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  :root {
+    --espace-page: 2rem;
+    --espace-section: 2rem;
+    --espace-bloc: 1.5rem;
+    --espace-titre: 0.75rem;
+  }
 }
 
 /* Ressources : l'ivoire et le bleu-violet de la maquette du cours, en thème clair seulement. */

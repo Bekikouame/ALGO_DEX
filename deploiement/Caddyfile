@@ -1,0 +1,22 @@
+# Seule porte d'entrée publique : HTTPS automatique (Let's Encrypt) pour {$DOMAINE}.
+{$DOMAINE} {
+	encode zstd gzip
+
+	# Back-office et ses fichiers statiques : directement vers le moteur.
+	handle /{$DJANGO_CHEMIN_ADMIN}* {
+		reverse_proxy moteur:8000
+	}
+	handle /static/* {
+		reverse_proxy moteur:8000
+	}
+
+	# Tout le reste (pages et /api/*) passe par le site Next.
+	handle {
+		reverse_proxy site:3000
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}

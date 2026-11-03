@@ -56,13 +56,13 @@ export function CarteExercice({ exercice, avecChapitre = true }: { exercice: Exe
   );
 
   return etat === "verrouille" ? (
-    <div className="card flex h-full flex-col p-5 opacity-60" aria-disabled>
+    <div className="card flex h-full flex-col p-carte opacity-60" aria-disabled>
       {contenu}
     </div>
   ) : (
     <Link
       href={`/exercice/${exercice.id}`}
-      className="card flex h-full flex-col p-5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_18px_40px_-22px_var(--primary)]"
+      className="card flex h-full flex-col p-carte transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_18px_40px_-22px_var(--primary)]"
     >
       {contenu}
     </Link>
