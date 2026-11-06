@@ -1,0 +1,433 @@
+"""Exercices de D. Bouchiha hors de ce que le moteur V1 exécute : fiche seule, sans version jouable.
+
+Énoncés reformulés en pseudo-code indépendant du langage (la source demande une traduction en Pascal).
+Raison principale pour chaque groupe : saisie interactive, fonction mathématique absente (racine, arc tangente,
+partie entière), structure selon, ou notion postérieure à la V1.
+"""
+
+from .outils import fiche, source
+
+B = lambda ch, n, nature="reformulation", **k: source("bouchiha", ch, n, nature, **k)
+INTERACTIF = "Exige une saisie interactive (lire) : non jouable dans le moteur V1."
+
+
+def C(cle, titre, notion, niveau, diff, enonce, objectifs, src, **k):
+    return fiche(cle, titre, notion, niveau, diff, enonce, objectifs, src, **k)
+
+
+CATALOGUE = [
+    # ---------------------------------------------------------- séquentiel et conditions
+    C("bouchiha-2-9", "Périmètre et aire d'un triangle", "variables", "debutant", 2,
+      "Les longueurs a, b et c des côtés d'un triangle sont données. Calcule son périmètre p = a + b + c, puis son aire "
+      "par la formule de Héron : racine de (p/2)(p/2 - a)(p/2 - b)(p/2 - c).",
+      ["Appliquer une formule à plusieurs étapes", "Utiliser un demi-périmètre intermédiaire"], B(2, 9),
+      indices=["Calcule d'abord le demi-périmètre s = p / 2."],
+      exemples=[{"entree": "a = 3, b = 4, c = 5", "sortie": "périmètre 12, aire 6"}],
+      remarques="Nécessite la racine carrée, absente du moteur V1."),
+    C("bouchiha-3-11", "L'équation du second degré", "conditions", "intermediaire", 3,
+      "Les coefficients a (non nul), b et c sont donnés. Calcule le discriminant d = b² - 4ac. Si d > 0, affiche les "
+      "deux racines (-b ± √d) / 2a ; si d = 0, la racine double -b / 2a ; si d < 0, indique qu'il n'y a pas de racine réelle.",
+      ["Distinguer trois cas selon un discriminant", "Traduire des formules mathématiques"], B(3, 11),
+      indices=["Le signe du discriminant décide du nombre de racines."],
+      exemples=[{"entree": "a = 1, b = -3, c = 2", "sortie": "racines 1 et 2"}],
+      remarques="Nécessite la racine carrée, absente du moteur V1."),
+    C("bouchiha-3-12", "Le jour en toutes lettres", "conditions", "debutant", 1,
+      "Un numéro de 1 à 7 est donné. Affiche le nom du jour correspondant (1 = lundi … 7 = dimanche) à l'aide d'une "
+      "structure de choix multiple (selon).",
+      ["Utiliser une structure de choix multiple"], B(3, 12),
+      indices=["Prévois une branche par défaut pour un numéro hors de 1..7."],
+      remarques="La structure selon n'existe pas dans le moteur V1 ; la remplacer par des si changerait l'objectif."),
+    C("bouchiha-3-13", "La calculatrice à menu", "conditions", "debutant", 2,
+      "Trois nombres sont saisis, puis un menu propose : 1 somme, 2 produit, 3 moyenne. Selon le choix tapé, affiche le "
+      "résultat demandé.",
+      ["Construire un menu", "Associer un choix à un traitement"], B(3, 13), secondaires=["variables"],
+      indices=["Le numéro choisi pilote une structure de choix multiple."], remarques=INTERACTIF),
+    C("bouchiha-3-17", "Des coordonnées cartésiennes aux polaires", "conditions", "intermediaire", 3,
+      "Un point (x, y) est donné. Calcule r = √(x² + y²) et l'angle t : si x = 0, t vaut π/2 si y > 0, -π/2 si y < 0 et "
+      "n'existe pas si y = 0 ; sinon t = arctan(y / x), plus π si x < 0.",
+      ["Traiter des cas particuliers géométriques", "Imbriquer des conditions"], B(3, 17),
+      remarques="Nécessite racine carrée et arc tangente, absentes du moteur V1."),
+    C("bouchiha-3-18", "Le jour de la semaine d'une date", "conditions", "intermediaire", 4,
+      "Une date (jour, mois, année postérieure à 1582) est donnée. Calcule le jour de la semaine par la formule du jour "
+      "julien : janvier et février comptent comme mois 13 et 14 de l'année précédente, puis un calcul de parties "
+      "entières donne un reste de 0 (mardi) à 6 (lundi).",
+      ["Appliquer une formule calendaire", "Associer un reste à un libellé"], B(3, 18),
+      remarques="Nécessite la partie entière de nombres réels, absente du moteur V1."),
+    C("bouchiha-3-19", "Une approximation du sinus", "conditions", "avance", 4,
+      "Un angle en radians est donné. Ramène-le entre 0 et π/4 par des symétries successives en mémorisant le signe, puis "
+      "approxime le sinus par un développement limité (ou le cosinus du complémentaire), et rétablis le signe.",
+      ["Réduire un problème par symétries", "Enchaîner de nombreuses conditions"], B(3, 19),
+      remarques="Nécessite la partie entière de réels ; long enchaînement de cas."),
+    C("bouchiha-4-1", "Une même somme avec trois boucles", "boucles", "debutant", 2,
+      "Un entier n est donné. Calcule 1 + 2 + … + n trois fois : avec tant que, avec répéter … jusqu'à, puis avec pour. "
+      "Compare les trois écritures.",
+      ["Comparer les trois formes de boucle", "Choisir la boucle adaptée"], B(4, 1),
+      indices=["Répéter s'exécute au moins une fois : que se passe-t-il si n = 0 ?"],
+      remarques="La boucle répéter … jusqu'à n'existe pas dans le moteur V1 (la version pour est jouable : « La somme de 1 à n »)."),
+    C("bouchiha-4-4", "Une saisie entre 1 et 3", "boucles", "debutant", 1,
+      "Demande un nombre entre 1 et 3 jusqu'à ce que la réponse convienne.",
+      ["Contrôler une saisie avec une boucle"], B(4, 4), remarques=INTERACTIF),
+    C("bouchiha-4-5", "Plus petit ! Plus grand !", "boucles", "debutant", 2,
+      "Demande un nombre entre 10 et 20 jusqu'à ce que la réponse convienne ; affiche « Plus petit ! » si la réponse "
+      "dépasse 20 et « Plus grand ! » si elle est sous 10.",
+      ["Contrôler une saisie", "Guider l'utilisateur par des messages"], B(4, 5), remarques=INTERACTIF),
+    C("bouchiha-4-9", "Le menu des statistiques", "boucles", "intermediaire", 3,
+      "Saisis des réels positifs jusqu'à un nombre négatif (non compté). Propose ensuite en boucle un menu : minimum, "
+      "maximum, somme, moyenne, ou quitter.",
+      ["Combiner saisie avec sentinelle et menu", "Calculer plusieurs statistiques"], B(4, 9), secondaires=["conditions"],
+      remarques=INTERACTIF),
+    C("bouchiha-5-2", "Lire et afficher un tableau de caractères", "tableaux", "debutant", 1,
+      "Crée un tableau de dix caractères, remplis-le au clavier, puis affiche son contenu.",
+      ["Remplir un tableau case par case", "Parcourir un tableau pour l'afficher"], B(5, 2), remarques=INTERACTIF),
+    C("bouchiha-5-21", "Une matrice remplie de zéros", "tableaux_2d", "intermediaire", 1,
+      "Crée un tableau d'entiers à deux dimensions (3 lignes, 10 colonnes), mets toutes ses cases à 0, puis affiche-le "
+      "ligne par ligne.",
+      ["Parcourir une matrice avec deux boucles imbriquées"], B(5, 21, autres=[{"code": "debrauwer", "chapitre": 2, "numero": 14}]),
+      secondaires=["boucles"], complexite={"temps": "O(lignes × colonnes)", "espace": "O(lignes × colonnes)"}),
+    C("bouchiha-5-26", "Compter une valeur dans une matrice", "tableaux_2d", "intermediaire", 2,
+      "Une matrice 3 × 10 est remplie, puis une valeur v est donnée. Compte combien de fois v apparaît dans la matrice.",
+      ["Combiner parcours de matrice et compteur"], B(5, 26), complexite={"temps": "O(n × m)", "espace": "O(1)"}),
+    C("bouchiha-5-27", "Les totaux par lignes et par colonnes", "tableaux_2d", "avance", 3,
+      "Une matrice 10 × 20 est remplie. Calcule dans un tableau TotLig la somme de chaque ligne et dans TotCol celle de "
+      "chaque colonne.",
+      ["Accumuler dans deux tableaux selon deux dimensions"], B(5, 27), complexite={"temps": "O(n × m)", "espace": "O(n + m)"}),
+    C("bouchiha-5-28", "La transposée d'une matrice", "tableaux_2d", "avance", 3,
+      "Une matrice carrée 3 × 3 est donnée. Calcule sa transposée : la case (i, j) reçoit la case (j, i).",
+      ["Manipuler des indices symétriques"], B(5, 28),
+      indices=["Transposer sur place : ne parcourir que la moitié au-dessus de la diagonale."],
+      complexite={"temps": "O(n²)", "espace": "O(1) sur place"}),
+    C("bouchiha-5-29", "Le produit de deux matrices", "tableaux_2d", "avance", 4,
+      "Deux matrices 3 × 3 A et B sont données. Calcule leur produit C : C(i, j) = somme sur k de A(i, k) × B(k, j).",
+      ["Imbriquer trois boucles", "Traduire une définition mathématique"], B(5, 29),
+      complexite={"temps": "O(n³)", "espace": "O(n²)"}),
+    C("bouchiha-5-34", "Compter un caractère dans une chaîne", "chaines", "intermediaire", 2,
+      "Une chaîne de 20 caractères au plus et un caractère c sont donnés. Compte le nombre d'apparitions de c.",
+      ["Parcourir une chaîne caractère par caractère"], B(5, 34), complexite={"temps": "O(n)", "espace": "O(1)"},
+      remarques="L'accès à un caractère d'une chaîne n'existe pas dans le moteur V1."),
+    C("bouchiha-5-35", "Compter les mots d'un texte", "chaines", "intermediaire", 3,
+      "Un texte n'est fait que de lettres et d'espaces ; un espace sépare toujours deux mots et il y a au moins un mot. "
+      "Compte le nombre de mots.",
+      ["Raisonner sur les séparateurs", "Parcourir une chaîne"], B(5, 35),
+      indices=["Avec ces hypothèses, nombre de mots = nombre d'espaces + 1."]),
+    C("bouchiha-5-36", "Les apparitions d'un mot dans un texte", "chaines", "intermediaire", 4,
+      "Un mot et un texte (lettres et espaces simples) sont donnés. Compte combien de fois le mot apparaît comme mot entier.",
+      ["Découper un texte en mots", "Comparer des sous-chaînes"], B(5, 36),
+      indices=["Ne compte pas « chat » dans « chaton » : vérifie les espaces autour."]),
+    C("bouchiha-5-37", "Écrire un entier en binaire", "chaines", "intermediaire", 3,
+      "Un entier positif est donné. Construis sa représentation binaire sous forme de chaîne de caractères.",
+      ["Divisions successives par 2", "Construire une chaîne de droite à gauche"], B(5, 37), secondaires=["boucles"],
+      exemples=[{"entree": "13", "sortie": "\"1101\""}], complexite={"temps": "O(log n)", "espace": "O(log n)"},
+      remarques="Nécessite de convertir un chiffre en caractère, absent du moteur V1."),
+    C("bouchiha-5-38", "Le dernier caractère de chaque mot", "chaines", "intermediaire", 2,
+      "Un tableau de 10 chaînes (5 caractères au plus) est donné. Affiche le dernier caractère de chaque chaîne.",
+      ["Combiner tableau et chaînes", "Utiliser la longueur pour trouver le dernier indice"], B(5, 38)),
+    C("bouchiha-5-39", "Mots en majuscules, triés", "chaines", "avance", 4,
+      "Un tableau de 10 mots est donné. Mets chaque mot en majuscules, puis trie le tableau par ordre alphabétique et "
+      "affiche-le.",
+      ["Transformer des caractères", "Adapter un tri numérique à des chaînes"], B(5, 39), secondaires=["tableaux"],
+      complexite={"temps": "O(n²) avec un tri simple", "espace": "O(1)"}),
+
+    # ---------------------------------------------------------------- sous-programmes et récursivité
+    C("bouchiha-6-1", "La surface d'un rectangle par une fonction", "fonctions", "intermediaire", 1,
+      "Écris une fonction surface(longueur, largeur) qui renvoie l'aire d'un rectangle, puis un programme qui l'appelle.",
+      ["Définir et appeler une fonction", "Distinguer paramètres formels et effectifs"], B(6, 1)),
+    C("bouchiha-6-2", "Somme et concaténation par une procédure", "fonctions", "intermediaire", 1,
+      "Écris une procédure qui reçoit deux entiers et deux chaînes, et affiche la somme des entiers et la concaténation "
+      "des chaînes.",
+      ["Écrire une procédure à plusieurs paramètres de types différents"], B(6, 2)),
+    C("bouchiha-6-4", "La factorielle au choix", "fonctions", "intermediaire", 2,
+      "Trois entiers a, b, c sont saisis. Un menu demande lequel traiter, puis une fonction calcule sa factorielle. "
+      "Réécris ensuite le calcul sous forme de procédure qui renvoie le résultat par un paramètre.",
+      ["Comparer fonction et procédure", "Passer un résultat par paramètre"], B(6, 4), secondaires=["boucles"]),
+    C("bouchiha-6-5", "Permuter par une procédure", "fonctions", "intermediaire", 2,
+      "Écris une procédure qui échange les valeurs de deux variables reçues en paramètres, puis vérifie l'échange depuis "
+      "le programme principal.",
+      ["Comprendre le passage par variable (référence)"], B(6, 5),
+      indices=["Avec un passage par valeur, l'échange resterait invisible pour l'appelant."]),
+    C("bouchiha-6-8", "Ramener une valeur dans un intervalle", "fonctions", "intermediaire", 3,
+      "Écris une fonction booléenne qui reçoit deux bornes et une valeur x passée par variable : si x sort de "
+      "l'intervalle, elle le ramène à la borne la plus proche et renvoie vrai ; sinon elle renvoie faux.",
+      ["Modifier un paramètre et renvoyer un résultat", "Traiter les deux bornes"], B(6, 8),
+      remarques="La source dit seulement que x est modifié pour rester dans l'intervalle ; « la borne la plus proche » est le choix retenu."),
+    C("bouchiha-6-9", "Le maximum de quatre nombres", "fonctions", "intermediaire", 2,
+      "Écris une fonction max2(x, y), puis utilise-la pour trouver le maximum de quatre réels. Déroule le programme "
+      "pour 50, 9, 80, 5.",
+      ["Réutiliser une fonction", "Dérouler des appels successifs"], B(6, 9),
+      exemples=[{"entree": "50, 9, 80, 5", "sortie": "80"}]),
+    C("bouchiha-6-11", "Découper un problème : extrêmes d'un tableau", "fonctions", "intermediaire", 3,
+      "Trouve le maximum et le minimum d'un tableau de dix entiers avec leurs positions. Découpe le problème en "
+      "sous-problèmes et résous chacun par un sous-programme.",
+      ["Analyse descendante", "Choisir entre fonction et procédure"], B(6, 11), secondaires=["tableaux"]),
+    C("bouchiha-6-12", "Trier entre le maximum et le minimum", "fonctions", "avance", 4,
+      "Dans un tableau de dix entiers, trie par ordre croissant la portion comprise entre les positions du maximum et du "
+      "minimum. Organise la solution en sous-programmes.",
+      ["Composer plusieurs sous-programmes", "Trier une portion de tableau"], B(6, 12), secondaires=["tableaux"]),
+    C("bouchiha-6-13", "Le diplôme en deux modules", "fonctions", "intermediaire", 3,
+      "Un étudiant a un écrit et un oral dans deux modules (coefficients 1 et 2). Dans chaque module, la meilleure des "
+      "deux notes compte double. Après saisie des quatre notes, affiche la décision : diplôme si la moyenne est au moins "
+      "10 et qu'aucun module n'est sous 8.",
+      ["Décomposer un calcul en fonctions", "Combiner plusieurs conditions de décision"], B(6, 13), secondaires=["conditions"]),
+    C("bouchiha-6-16", "Le binaire par récursivité", "recursivite", "avance", 3,
+      "Écris une procédure récursive qui affiche l'écriture binaire d'un entier positif.",
+      ["Exploiter l'ordre des appels récursifs pour l'affichage"], B(6, 16),
+      indices=["Affiche n mod 2 après l'appel sur n div 2."], complexite={"temps": "O(log n)", "espace": "O(log n)"}),
+    C("bouchiha-6-17", "Un nombre en chaîne par récursivité", "recursivite", "avance", 3,
+      "Écris une procédure récursive qui construit la chaîne de caractères représentant un entier décimal.",
+      ["Récursivité sur les chiffres"], B(6, 17), secondaires=["chaines"]),
+    C("bouchiha-6-18", "Le palindrome récursif", "recursivite", "avance", 3,
+      "Écris une fonction récursive qui dit si une chaîne est un palindrome (même lecture dans les deux sens).",
+      ["Réduire un problème aux extrémités"], B(6, 18), secondaires=["chaines"],
+      indices=["Compare le premier et le dernier caractère, puis le reste."], complexite={"temps": "O(n)", "espace": "O(n)"}),
+    C("bouchiha-6-19", "Le miroir d'une chaîne", "recursivite", "avance", 3,
+      "Écris une fonction récursive qui renvoie le miroir d'une chaîne (« ahmed » → « demha »).",
+      ["Construire un résultat par récursivité"], B(6, 19, autres=[{"code": "recursivite", "chapitre": None, "numero": 5}]),
+      secondaires=["chaines"], exemples=[{"entree": "PASCAL", "sortie": "LACSAP"}]),
+    C("bouchiha-6-20", "La puissance récursive", "recursivite", "avance", 2,
+      "Écris une fonction récursive qui calcule a puissance n (n entier positif ou nul) en n'utilisant que la "
+      "multiplication, le retrait de 1 et la comparaison à 0.",
+      ["Identifier le cas de base", "Formuler une relation de récurrence"],
+      B(6, 20, autres=[{"code": "recursivite", "chapitre": None, "numero": 4}]),
+      indices=["a⁰ = 1 et aⁿ = a × aⁿ⁻¹."], complexite={"temps": "O(n)", "espace": "O(n)"}),
+    C("bouchiha-6-21", "Fibonacci récursif", "recursivite", "avance", 2,
+      "Écris une fonction récursive qui calcule le n-ième terme de Fibonacci (F0 = 0, F1 = 1).",
+      ["Traduire une récurrence double"], B(6, 21),
+      indices=["Compte les appels pour n = 5 : que remarques-tu ?"], complexite={"temps": "O(2ⁿ)", "espace": "O(n)"}),
+    C("bouchiha-6-22", "Le maximum d'un tableau par récursivité", "recursivite", "avance", 3,
+      "Écris une procédure récursive qui trouve le maximum d'un tableau de dix entiers.",
+      ["Réduire un tableau d'une case à chaque appel"], B(6, 22), secondaires=["tableaux"],
+      complexite={"temps": "O(n)", "espace": "O(n)"}),
+    C("bouchiha-6-23", "La dichotomie récursive", "recursivite", "avance", 3,
+      "Écris une procédure récursive de recherche dichotomique dans un tableau trié de cinq réels.",
+      ["Passer les bornes de recherche en paramètres"], B(6, 23), secondaires=["tableaux"],
+      complexite={"temps": "O(log n)", "espace": "O(log n)"}),
+
+    # ---------------------------------------------------------------- complexité
+    C("bouchiha-7-2", "Coût de la recherche séquentielle", "complexite", "avance", 3,
+      "Pour la recherche séquentielle avec drapeau dans un tableau de n cases, où la valeur cherchée est présente une "
+      "seule fois, détermine le nombre de comparaisons au pire, au mieux et en moyenne, puis l'ordre de complexité.",
+      ["Compter les opérations dans les cas extrêmes", "Calculer un coût moyen"], B(7, 2), secondaires=["tableaux"],
+      complexite={"temps": "O(n)", "espace": "O(1)"}),
+    C("bouchiha-7-3", "Coût du tri par sélection", "complexite", "avance", 3,
+      "Pour le tri par sélection d'un tableau de n cases, détermine le nombre de comparaisons et d'échanges au pire, "
+      "au mieux et en moyenne.",
+      ["Compter les tours de boucles imbriquées"], B(7, 3), complexite={"temps": "O(n²)", "espace": "O(1)"}),
+    C("bouchiha-7-5", "Factorielle : itérative ou récursive ?", "complexite", "avance", 2,
+      "Détermine l'ordre de complexité, en temps et en espace, du calcul de la factorielle sous forme itérative puis "
+      "récursive.",
+      ["Comparer la mémoire consommée par la récursivité"], B(7, 5), complexite={"temps": "O(n)", "espace": "O(1) / O(n)"}),
+    C("bouchiha-7-6", "Le coût de Fibonacci récursif", "complexite", "avance", 4,
+      "Détermine l'ordre de complexité du calcul récursif naïf du n-ième terme de Fibonacci.",
+      ["Établir une relation de récurrence sur le coût"], B(7, 6), complexite={"temps": "exponentiel", "espace": "O(n)"}),
+    C("bouchiha-7-7", "Le coût des tours de Hanoï", "complexite", "avance", 4,
+      "Détermine le nombre de déplacements effectués par la solution récursive des tours de Hanoï pour n disques, "
+      "puis son ordre de complexité.",
+      ["Résoudre une récurrence T(n) = 2T(n-1) + 1"], B(7, 7), secondaires=["recursivite"],
+      complexite={"temps": "O(2ⁿ)", "espace": "O(n)"}),
+
+    # ---------------------------------------------------------------- types définis et enregistrements
+    C("bouchiha-8-1", "Les jours fériés (type énuméré)", "enregistrements", "intermediaire", 2,
+      "Définis un type énuméré des jours de la semaine. Un entier est saisi : dis si le jour correspondant est férié.",
+      ["Définir un type énuméré"], B(8, 1), remarques=INTERACTIF),
+    C("bouchiha-8-2", "Le feu de circulation (type énuméré)", "enregistrements", "intermediaire", 2,
+      "Définis un type énuméré des couleurs d'un feu tricolore ; un entier saisi indique la couleur, affiche la consigne "
+      "correspondante.",
+      ["Associer des valeurs énumérées à des actions"], B(8, 2), remarques=INTERACTIF),
+    C("bouchiha-8-3", "Restreindre une saisie (type intervalle)", "enregistrements", "intermediaire", 2,
+      "Améliore le programme du feu de circulation avec un type intervalle qui limite les valeurs acceptées.",
+      ["Utiliser un type intervalle"], B(8, 3)),
+    C("bouchiha-8-4", "Majuscule ou minuscule (ensembles)", "enregistrements", "intermediaire", 2,
+      "Déclare l'ensemble des majuscules et celui des minuscules ; dis à quel ensemble appartient un caractère donné.",
+      ["Tester l'appartenance à un ensemble"], B(8, 4), secondaires=["chaines"]),
+    C("bouchiha-8-5", "Compter les voyelles d'un mot", "chaines", "intermediaire", 2,
+      "Compte le nombre de voyelles d'un mot en utilisant l'ensemble {a, e, i, o, u}.",
+      ["Parcourir un mot", "Tester l'appartenance à un ensemble"], B(8, 5, autres=[{"code": "debrauwer", "chapitre": 5, "numero": 1}]),
+      complexite={"temps": "O(n)", "espace": "O(1)"}),
+    C("bouchiha-8-6", "Décrire des enregistrements", "enregistrements", "intermediaire", 2,
+      "Décris les types enregistrements suivants : un nombre complexe (parties réelle et imaginaire), une date (jour, "
+      "mois, année), un stage (intitulé, dates de début et de fin, nombre de places), une identité (nom, prénom, date de "
+      "naissance) et une fiche bibliographique (titre, auteurs identifiés par nom, prénom et date de naissance, date de "
+      "parution, éditeur, numéro ISBN). Écris ensuite comment affecter une valeur à : la partie réelle d'un complexe X, le "
+      "jour d'une date Y, le mois de la date de début d'un stage Z, l'année de naissance d'une identité G, et le jour de "
+      "naissance du premier auteur d'une fiche H.",
+      ["Modéliser des données composées", "Imbriquer des enregistrements", "Accéder à un champ imbriqué"], B(8, 6)),
+
+    # ---------------------------------------------------------------- fichiers
+    C("bouchiha-9-1", "Accès direct dans un fichier", "fichiers", "avance", 3,
+      "Un fichier contient des enregistrements d'étudiants. Lis une position (la première vaut 0) et affiche directement "
+      "l'enregistrement qui s'y trouve, sans parcourir les précédents.",
+      ["Distinguer accès séquentiel et accès direct"], B(9, 1),
+      remarques="La source s'appuie sur un programme du cours ; l'énoncé est rendu autonome."),
+    C("bouchiha-9-2", "Créer un fichier d'étudiants", "fichiers", "avance", 2,
+      "Crée un fichier d'étudiants (numéro, nom, moyenne) à partir de saisies, puis relis-le pour afficher les moyennes "
+      "obtenues.",
+      ["Écrire puis relire un fichier typé"], B(9, 2), secondaires=["enregistrements"],
+      remarques="Énoncé source en partie illisible ; reconstitué à partir des champs indiqués."),
+    C("bouchiha-9-3", "Trier un fichier", "fichiers", "avance", 4,
+      "Recopie la liste des étudiants d'un fichier dans un second fichier, triée par moyenne croissante.",
+      ["Charger, trier et réécrire des enregistrements"], B(9, 3), secondaires=["tableaux"]),
+    C("bouchiha-9-4", "Insérer dans un fichier trié", "fichiers", "avance", 4,
+      "Insère un nouvel étudiant dans un fichier trié par moyenne en conservant l'ordre.",
+      ["Insérer en préservant un ordre"], B(9, 4)),
+    C("bouchiha-9-5", "Modifier ou supprimer un étudiant", "fichiers", "avance", 4,
+      "Un numéro d'étudiant est saisi : propose de modifier ou de supprimer ses informations dans le fichier, et signale "
+      "s'il n'existe pas.",
+      ["Rechercher, modifier et supprimer dans un fichier"], B(9, 5)),
+    C("bouchiha-9-6", "Fusionner deux fichiers texte", "fichiers", "avance", 2,
+      "Copie le contenu de deux fichiers texte, l'un après l'autre, dans un troisième fichier.",
+      ["Lire et écrire des fichiers texte"], B(9, 6)),
+
+    # ---------------------------------------------------------------- listes chaînées
+    C("bouchiha-10-2", "Créer et afficher une liste chaînée", "listes_chainees", "avance", 2,
+      "Crée une liste chaînée de personnes (numéro, nom) avec au moins un élément, à l'aide d'une procédure d'ajout en "
+      "queue et d'une procédure d'affichage. Quelle instruction rendrait la liste circulaire ?",
+      ["Créer des maillons dynamiquement", "Maintenir des pointeurs de tête et de queue"], B(10, 2), secondaires=["pointeurs"]),
+    C("bouchiha-10-3", "La longueur d'une liste", "listes_chainees", "avance", 2,
+      "Écris une fonction qui renvoie le nombre d'éléments d'une liste chaînée.",
+      ["Parcourir une liste jusqu'à nil"], B(10, 3, autres=[{"code": "td_sdc", "chapitre": None, "numero": 6}]),
+      complexite={"temps": "O(n)", "espace": "O(1)"}),
+    C("bouchiha-10-4", "Chercher dans une liste", "listes_chainees", "avance", 2,
+      "Écris une fonction booléenne qui dit si une personne (numéro et nom donnés) figure dans une liste chaînée.",
+      ["Rechercher dans une liste"], B(10, 4), complexite={"temps": "O(n)", "espace": "O(1)"}),
+    C("bouchiha-10-5", "Renvoyer l'élément trouvé", "listes_chainees", "avance", 2,
+      "Modifie la recherche précédente pour qu'elle renvoie un pointeur vers l'élément trouvé, ou nil s'il est absent.",
+      ["Renvoyer un pointeur"], B(10, 5)),
+    C("bouchiha-10-6", "Le k-ième élément d'une liste", "listes_chainees", "avance", 2,
+      "Écris une fonction qui renvoie un pointeur vers le k-ième élément d'une liste, ou nil si k dépasse sa taille. "
+      "Écris-en une version itérative et une version récursive.",
+      ["Avancer de k maillons", "Comparer itératif et récursif"],
+      B(10, 6, autres=[{"code": "td_sdc", "chapitre": None, "numero": 2}]), secondaires=["recursivite"]),
+    C("bouchiha-10-7", "Insérer à une position", "listes_chainees", "avance", 3,
+      "Écris une procédure qui insère un élément à la position k d'une liste (k entre 1 et la longueur + 1). Variante : "
+      "si la liste est trop courte, insère à la fin.",
+      ["Rebrancher des pointeurs", "Traiter l'insertion en tête"],
+      B(10, 7, autres=[{"code": "td_sdc", "chapitre": None, "numero": 5}])),
+    C("bouchiha-10-8", "Supprimer à une position", "listes_chainees", "avance", 3,
+      "Écris une procédure qui supprime l'élément de position k d'une liste et libère sa mémoire.",
+      ["Supprimer un maillon sans casser la chaîne"], B(10, 8)),
+    C("bouchiha-10-9", "Renverser une liste", "listes_chainees", "avance", 3,
+      "Écris une procédure qui inverse l'ordre des éléments d'une liste chaînée en modifiant les pointeurs.",
+      ["Inverser des liens en un parcours"], B(10, 9, autres=[{"code": "td_sdc", "chapitre": None, "numero": 6}]),
+      complexite={"temps": "O(n)", "espace": "O(1)"}),
+    C("bouchiha-10-10", "Deux listes d'entiers", "listes_chainees", "avance", 2,
+      "Crée deux listes chaînées d'entiers de longueur quelconque avec une procédure de création et une procédure "
+      "d'ajout en queue, puis affiche-les.",
+      ["Factoriser la création de listes en procédures"], B(10, 10)),
+    C("bouchiha-10-11", "Concaténer deux listes", "listes_chainees", "avance", 2,
+      "Écris une procédure qui accroche la seconde liste à la fin de la première.",
+      ["Raccorder deux listes"], B(10, 11, autres=[{"code": "td_sdc", "chapitre": None, "numero": 6}])),
+    C("bouchiha-10-12", "Trier une liste chaînée", "listes_chainees", "avance", 4,
+      "Écris une procédure qui trie une liste d'entiers par ordre croissant.",
+      ["Adapter un tri aux listes chaînées"], B(10, 12), complexite={"temps": "O(n²) avec un tri simple", "espace": "O(1)"}),
+    C("bouchiha-10-13", "Insérer dans une liste triée", "listes_chainees", "avance", 3,
+      "Écris une procédure qui insère une valeur dans une liste d'entiers triée en conservant l'ordre.",
+      ["Trouver le point d'insertion dans une liste"], B(10, 13)),
+    C("bouchiha-10-14", "Fusionner deux listes triées", "listes_chainees", "avance", 4,
+      "Écris une procédure qui fusionne deux listes d'entiers triées en une seule liste triée.",
+      ["Fusionner en réutilisant les maillons"], B(10, 14), complexite={"temps": "O(m + n)", "espace": "O(1)"}),
+    C("bouchiha-10-15", "Une liste doublement chaînée", "listes_chainees", "avance", 3,
+      "Reprends la liste de personnes en stockant les informations dans une liste doublement chaînée.",
+      ["Maintenir des liens dans les deux sens"], B(10, 15)),
+    C("bouchiha-10-16", "Insérer avant un élément", "listes_chainees", "avance", 4,
+      "Dans la liste doublement chaînée précédente, insère un nouvel élément juste avant celui dont le numéro est donné.",
+      ["Mettre à jour quatre liens"], B(10, 16)),
+
+    # ---------------------------------------------------------------- arbres
+    C("bouchiha-11-1", "Représenter un arbre n-aire", "arbres", "avance", 2,
+      "Propose une structure de données pour stocker un arbre n-aire d'entiers.",
+      ["Choisir une représentation d'arbre"], B(11, 1)),
+    C("bouchiha-11-3", "Créer et parcourir un arbre binaire", "arbres", "avance", 3,
+      "Crée un arbre binaire de caractères par une procédure récursive, puis affiche-le en parcours racine-gauche-droite.",
+      ["Construire un arbre récursivement", "Parcours préfixe"], B(11, 3), secondaires=["recursivite"]),
+    C("bouchiha-11-4", "Chercher dans un arbre binaire", "arbres", "avance", 3,
+      "Écris une fonction booléenne qui dit si un caractère figure dans un arbre binaire.",
+      ["Recherche récursive dans un arbre"], B(11, 4), complexite={"temps": "O(n)", "espace": "O(hauteur)"}),
+    C("bouchiha-11-5", "Renvoyer le nœud trouvé", "arbres", "avance", 3,
+      "Modifie la recherche précédente pour qu'elle renvoie un pointeur vers le nœud trouvé, ou nil.",
+      ["Remonter un résultat dans la récursion"], B(11, 5)),
+    C("bouchiha-11-6", "Le niveau d'un nœud", "arbres", "avance", 3,
+      "Écris une fonction qui renvoie le niveau (profondeur) d'un caractère dans un arbre binaire.",
+      ["Transmettre une profondeur dans les appels"], B(11, 6)),
+    C("bouchiha-11-7", "Compter les feuilles", "arbres", "avance", 2,
+      "Écris une fonction qui renvoie le nombre de feuilles d'un arbre binaire.",
+      ["Reconnaître une feuille", "Combiner des résultats récursifs"], B(11, 7)),
+    C("bouchiha-11-8", "Le mot des feuilles", "arbres", "avance", 3,
+      "Écris une fonction qui renvoie la chaîne formée par les feuilles d'un arbre binaire de caractères, de gauche à droite.",
+      ["Concaténer des résultats récursifs"], B(11, 8), secondaires=["chaines"]),
+    C("bouchiha-11-9", "La taille d'un arbre", "arbres", "avance", 2,
+      "Écris une fonction qui renvoie le nombre de nœuds d'un arbre binaire : 1 plus la taille de chaque sous-arbre.",
+      ["Formuler une définition récursive"], B(11, 9)),
+    C("bouchiha-11-10", "Un arbre dégénéré ?", "arbres", "avance", 3,
+      "Écris une fonction booléenne qui dit si un arbre binaire est dégénéré (chaque nœud a au plus un fils).",
+      ["Vérifier une propriété sur tous les nœuds"], B(11, 10, autres=[{"code": "td_sdc", "chapitre": None, "numero": 10}])),
+    C("bouchiha-11-11", "La hauteur d'un arbre", "arbres", "avance", 3,
+      "Écris une fonction qui renvoie la hauteur d'un arbre binaire.",
+      ["Combiner le maximum de deux appels récursifs"], B(11, 11)),
+    C("bouchiha-11-12", "Un arbre équilibré ?", "arbres", "avance", 4,
+      "Écris une fonction booléenne qui dit si un arbre binaire est équilibré : pour chaque nœud, les hauteurs de ses "
+      "deux sous-arbres diffèrent d'au plus 1.",
+      ["Combiner hauteur et vérification", "Éviter les recalculs"], B(11, 12),
+      complexite={"temps": "O(n²) naïf, O(n) en calculant la hauteur au passage", "espace": "O(hauteur)"}),
+
+    # ---------------------------------------------------------------- graphes
+    C("bouchiha-12-1", "Un graphe en listes d'adjacence", "graphes", "avance", 3,
+      "Représente un graphe orienté (par exemple 5 sommets et 7 arcs de ton choix) par des listes d'adjacence, puis "
+      "affiche-le.",
+      ["Représenter un graphe par listes chaînées"], B(12, 1), secondaires=["listes_chainees"],
+      remarques="La source utilise un graphe dessiné dans le cours, non disponible : le graphe est laissé au choix."),
+    C("bouchiha-12-2", "Un graphe en matrice d'adjacence", "graphes", "avance", 2,
+      "Représente le même graphe par une matrice d'adjacence, puis affiche-le.",
+      ["Représenter un graphe par une matrice"], B(12, 2), secondaires=["tableaux_2d"]),
+    C("bouchiha-12-3", "Des listes à la matrice", "graphes", "avance", 3,
+      "Écris une procédure qui transforme la représentation par listes d'adjacence en matrice d'adjacence.",
+      ["Convertir entre deux représentations"], B(12, 3)),
+    C("bouchiha-12-4", "Le parcours en largeur", "graphes", "avance", 4,
+      "Écris une procédure qui affiche les sommets d'un graphe (matrice d'adjacence) dans l'ordre d'un parcours en "
+      "largeur à partir du sommet 1.",
+      ["Utiliser une file", "Marquer les sommets visités"], B(12, 4), secondaires=["piles_files"],
+      complexite={"temps": "O(n²) avec une matrice", "espace": "O(n)"}),
+    C("bouchiha-12-5", "Le parcours en profondeur", "graphes", "avance", 4,
+      "Écris une procédure qui affiche les sommets dans l'ordre d'un parcours en profondeur à partir du sommet 1.",
+      ["Parcours récursif ou avec pile"], B(12, 5), secondaires=["recursivite"]),
+    C("bouchiha-12-6", "Créer et afficher une matrice d'adjacence", "graphes", "avance", 2,
+      "Crée puis affiche un graphe de cinq sommets représenté par une matrice M(5 × 5), avec une procédure de création "
+      "et une procédure d'affichage.",
+      ["Organiser un programme en procédures"], B(12, 6), secondaires=["fonctions"]),
+    C("bouchiha-12-8", "La fermeture transitive", "graphes", "avance", 4,
+      "Écris une procédure qui calcule la fermeture transitive d'un graphe donné par une matrice 5 × 5 : il y a un arc "
+      "de i à j dès qu'un chemin mène de i à j.",
+      ["Appliquer l'algorithme de Warshall"], B(12, 8), complexite={"temps": "O(n³)", "espace": "O(n²)"}),
+    C("bouchiha-12-9", "Un graphe fortement connexe ?", "graphes", "avance", 4,
+      "Écris une fonction qui dit si un graphe donné par une matrice 5 × 5 est fortement connexe.",
+      ["Réutiliser la fermeture transitive"], B(12, 9)),
+    C("bouchiha-12-10", "Les composantes fortement connexes", "graphes", "avance", 5,
+      "Écris une procédure qui détermine et affiche les composantes fortement connexes d'un graphe donné par une matrice "
+      "5 × 5.",
+      ["Regrouper des sommets mutuellement accessibles"], B(12, 10)),
+
+    # ---------------------------------------------------------------- hachage
+    C("bouchiha-13-1", "Une table de hachage par chaînage", "hachage", "avance", 4,
+      "La fonction h associe à un mot le rang de sa première lettre dans l'alphabet (a = 0), modulo 11. Écris pour une "
+      "table de taille 11 avec chaînage des collisions : la fonction h, la recherche, l'insertion et l'affichage. Insère "
+      "par exemple : arbre, blanc, avion, chat, lune, citron, ballon.",
+      ["Implémenter une table de hachage", "Résoudre les collisions par chaînage"], B(13, 1, "variante"),
+      secondaires=["listes_chainees"], remarques="La liste de mots de la source est illisible : exemple de mots propre à ALGO_DEX."),
+    C("bouchiha-13-2", "Dessiner la table de hachage", "hachage", "avance", 2,
+      "Représente graphiquement la table obtenue à l'exercice précédent.",
+      ["Visualiser les collisions"], B(13, 2)),
+    C("bouchiha-13-3", "Supprimer dans une table par chaînage", "hachage", "avance", 3,
+      "Écris la procédure qui supprime un mot de la table de hachage avec chaînage.",
+      ["Supprimer dans une liste de collisions"], B(13, 3)),
+    C("bouchiha-13-4", "Une meilleure fonction de hachage", "hachage", "avance", 3,
+      "Propose une fonction de hachage qui réduit les collisions de la table précédente, et justifie ton choix.",
+      ["Analyser la répartition d'une fonction de hachage"], B(13, 4)),
+    C("bouchiha-13-5", "Le hachage par sondage linéaire", "hachage", "avance", 4,
+      "Reprends la table de hachage en adressage ouvert : en cas de collision, essaie la case suivante (d + 1).",
+      ["Implémenter l'adressage ouvert"], B(13, 5)),
+    C("bouchiha-13-6", "Le facteur de charge", "hachage", "avance", 2,
+      "Représente la table obtenue par sondage linéaire et calcule son facteur de charge (cases occupées / taille).",
+      ["Mesurer le remplissage d'une table"], B(13, 6)),
+    C("bouchiha-13-7", "Supprimer en adressage ouvert", "hachage", "avance", 5,
+      "Écris la procédure de suppression dans la table à sondage linéaire sans casser les recherches suivantes.",
+      ["Comprendre le rôle des cases « supprimées »"], B(13, 7),
+      indices=["Vider simplement la case interromprait la recherche des éléments placés après."]),
+]

@@ -15,6 +15,15 @@ export const LIBELLES_ETAT: Record<EtatExercice, string> = {
   verrouille: "Verrouillé",
 };
 
+export const LIBELLES_NIVEAU = { debutant: "Débutant", intermediaire: "Intermédiaire", avance: "Avancé" } as const;
+const RANG_NIVEAU = { debutant: 0, intermediaire: 1, avance: 2 };
+
+/** Du plus accessible au plus difficile ; le cœur du parcours d'abord. */
+export const ordreDifficulte = (a: ExerciceBibliotheque, b: ExerciceBibliotheque) =>
+  Number(b.principal) - Number(a.principal) ||
+  RANG_NIVEAU[a.niveau ?? "debutant"] - RANG_NIVEAU[b.niveau ?? "debutant"] ||
+  (a.difficulte ?? 0) - (b.difficulte ?? 0);
+
 /** Le chapitre du cours qui prépare une notion. */
 export const chapitreDeNotion = (notion: ExerciceBibliotheque["notion"]) => CHAPITRES.find((c) => c.notions.includes(notion));
 
@@ -43,7 +52,20 @@ export function CarteExercice({ exercice, avecChapitre = true }: { exercice: Exe
       <h3 className="mt-3 text-[16px] font-bold leading-snug">{exercice.titre}</h3>
       <p className="mt-1.5 line-clamp-3 flex-1 text-sm leading-relaxed text-text/70">{exercice.enonce}</p>
       <div className="mt-4 flex items-center justify-between gap-2 text-xs text-muted">
-        {avecChapitre && chapitre ? <span>Chapitre {chapitre.numero} · {chapitre.titre}</span> : <span />}
+        {avecChapitre && chapitre ? (
+          <span>Chapitre {chapitre.numero} · {chapitre.titre}</span>
+        ) : exercice.niveau && exercice.difficulte ? (
+          <span className="flex items-center gap-1.5" aria-label={`${LIBELLES_NIVEAU[exercice.niveau]}, difficulté ${exercice.difficulte} sur 5`}>
+            {LIBELLES_NIVEAU[exercice.niveau]}
+            <span className="flex gap-0.5" aria-hidden>
+              {[1, 2, 3, 4, 5].map((d) => (
+                <span key={d} className={`h-1.5 w-1.5 rounded-full ${d <= exercice.difficulte! ? "bg-primary" : "bg-border"}`} />
+              ))}
+            </span>
+          </span>
+        ) : (
+          <span />
+        )}
         {etat === "verrouille" ? (
           <span className="shrink-0">S&apos;ouvre avec ton parcours</span>
         ) : (

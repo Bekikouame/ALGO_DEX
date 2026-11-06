@@ -262,6 +262,17 @@ function ExecutionGuide({ guide }: { guide: Guide }) {
           ))}
         </div>
       </div>
+
+      {/* Guide en cage (F10) : accessible depuis le cockpit, jamais le point d'entrée. */}
+      <details className="mt-3 rounded-xl bg-white/[0.04] px-3.5 py-2.5 text-[15px] leading-relaxed">
+        <summary className="cursor-pointer text-sm font-semibold text-[#c4b8ff]">Le guide de cette notion</summary>
+        <p className="mt-2 font-semibold">{guide.titre}</p>
+        {guide.texte.map((t) => (
+          <p key={t} className="mt-1.5 text-white/80">
+            {t}
+          </p>
+        ))}
+      </details>
     </div>
   );
 }

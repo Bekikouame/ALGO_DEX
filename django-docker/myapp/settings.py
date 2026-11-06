@@ -155,6 +155,15 @@ STORAGES = {
 }
 
 
+# Compteurs des limites par IP : partagés entre les processus gunicorn en production.
+if not DEBUG:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+            "LOCATION": os.environ.get("DJANGO_DOSSIER_CACHE", "/tmp/algodex-cache"),
+        }
+    }
+
 # Sécurité
 # Requêtes JSON du moteur : quelques kilo-octets ; au-delà, c'est un abus.
 DATA_UPLOAD_MAX_MEMORY_SIZE = 512 * 1024

@@ -203,6 +203,19 @@ class BibliothequeView(VueApprenant):
         return Response(regles.bibliotheque(profil))
 
 
+class BanqueView(VueApprenant):
+    @extend_schema(
+        tags=["banque"],
+        summary="Banque d'exercices",
+        description="Toutes les fiches actives, triées du débutant à l'avancé. Filtres : niveau, notion, difficulte "
+                    "(valeurs séparées par des virgules), tag, q (recherche), jouable (0 ou 1). Jamais la correction.",
+        parameters=[OpenApiParameter(p, str, required=False) for p in ("niveau", "notion", "difficulte", "tag", "q", "jouable")],
+        responses=OpenApiTypes.OBJECT,
+    )
+    def get(self, request):
+        return Response(regles.banque(request.query_params))
+
+
 # --------------------------------------------------------------------------
 # /api/executer
 # --------------------------------------------------------------------------

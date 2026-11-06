@@ -1,4 +1,4 @@
-# ALGO_DEX en production : Caddy (HTTPS) → site Next → moteur Django → PostgreSQL.
+# ALGO_DEX en production : Caddy (HTTPS) → site Next → moteur Django → PostgreSQL, plus une sauvegarde quotidienne.
 # Seul Caddy est exposé (ports 80 et 443). Variables : fichier .env à côté (voir .env.example).
 
 services:
@@ -26,9 +26,9 @@ services:
     environment:
       DJANGO_DEBUG: "0"
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY manquant dans .env}
-      # « moteur » : l'hôte que le site Next utilise pour relayer /api/*.
-      DJANGO_ALLOWED_HOSTS: ${DOMAINE:?DOMAINE manquant dans .env},moteur
-      DJANGO_CSRF_TRUSTED_ORIGINS: https://${DOMAINE}
+      # Seuls le back-office (Caddy) et le relais du site (« moteur ») parlent au moteur.
+      DJANGO_ALLOWED_HOSTS: ${DOMAINE_ADMIN:?DOMAINE_ADMIN manquant dans .env},moteur
+      DJANGO_CSRF_TRUSTED_ORIGINS: https://${DOMAINE_ADMIN}
       DJANGO_CHEMIN_ADMIN: ${DJANGO_CHEMIN_ADMIN:-gestion-algodex/}
       # HTTPS est géré par Caddy ; Django ne redirige pas lui-même (le relais Next parle en http).
       DJANGO_DERRIERE_HTTPS: "1"
@@ -42,6 +42,23 @@ services:
       POSTGRES_PORT: "5432"
     expose:
       - "8000"
+
+  # Export quotidien de la base (cahier des charges, section 14) : deploiement/sauvegardes/, 14 jours gardés.
+  sauvegarde:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    depends_on:
+      base:
+        condition: service_healthy
+    environment:
+      PGHOST: base
+      PGDATABASE: ${POSTGRES_DB:-algodex}
+      PGUSER: ${POSTGRES_USER:-algodex}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./deploiement/sauvegardes:/sauvegardes
+      - ./deploiement/sauvegarder.sh:/sauvegarder.sh:ro
+    entrypoint: ["sh", "-c", "while true; do sh /sauvegarder.sh; sleep 86400; done"]
 
   site:
     build:
@@ -63,7 +80,8 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      DOMAINE: ${DOMAINE}
+      DOMAINE: ${DOMAINE:?DOMAINE manquant dans .env}
+      DOMAINE_ADMIN: ${DOMAINE_ADMIN}
       DJANGO_CHEMIN_ADMIN: ${DJANGO_CHEMIN_ADMIN:-gestion-algodex/}
     volumes:
       - ./deploiement/Caddyfile:/etc/caddy/Caddyfile:ro

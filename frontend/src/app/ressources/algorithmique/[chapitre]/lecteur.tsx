@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowLeft, ArrowRight, Check, Clock, Gauge, Languages, L
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { Fragment, useEffect, useState, type ReactNode } from "react";
-import { CarteExercice } from "@/components/ressources/carte-exercice";
+import { CarteExercice, ordreDifficulte } from "@/components/ressources/carte-exercice";
 import { CoqueRessources } from "@/components/ressources/coque-ressources";
 import { VisuelChapitre } from "@/components/ressources/illustrations";
 import { StatutPastille } from "@/components/ressources/statut";
@@ -41,7 +41,9 @@ export function LecteurChapitre() {
   const termine = statut === "termine";
   const suivant = CHAPITRES.find((c) => c.numero === chapitre.numero + 1);
   const precedent = CHAPITRES.find((c) => c.numero === chapitre.numero - 1);
-  const exercices = bibliotheque?.filter((e) => chapitre.notions.includes(e.notion)) ?? [];
+  // Un aperçu dans le chapitre : les plus accessibles, le reste est dans la bibliothèque.
+  const tousExercices = bibliotheque?.filter((e) => chapitre.notions.includes(e.notion)).sort(ordreDifficulte) ?? [];
+  const exercices = tousExercices.slice(0, 6);
 
   return (
     <CoqueRessources pseudo={pseudo}>
@@ -129,7 +131,7 @@ export function LecteurChapitre() {
                   ))}
                 </ul>
                 <Link href="/ressources/exercices" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline">
-                  Toute la bibliothèque d&apos;exercices <ArrowRight size={15} />
+                  {tousExercices.length > exercices.length ? `Voir les ${tousExercices.length} exercices de ce chapitre` : "Toute la bibliothèque d'exercices"} <ArrowRight size={15} />
                 </Link>
               </>
             )}

@@ -1,19 +1,30 @@
-# Seule porte d'entrée publique : HTTPS automatique (Let's Encrypt) pour {$DOMAINE}.
+# Seule porte d'entrée publique : HTTPS automatique (Let's Encrypt).
+# Le back-office n'existe que sur {$DOMAINE_ADMIN}, jamais sur l'adresse des apprenants {$DOMAINE}.
+
 {$DOMAINE} {
 	encode zstd gzip
 
-	# Back-office et ses fichiers statiques : directement vers le moteur.
-	handle /{$DJANGO_CHEMIN_ADMIN}* {
-		reverse_proxy moteur:8000
-	}
-	handle /static/* {
-		reverse_proxy moteur:8000
-	}
+	# Routes d'administration du moteur : introuvables depuis l'adresse publique.
+	@administration path /api/exercices /api/exercices/* /api/docs /api/docs/* /api/schema /api/schema/* /api/redoc /api/redoc/*
+	respond @administration 404
 
-	# Tout le reste (pages et /api/*) passe par le site Next.
-	handle {
-		reverse_proxy site:3000
+	# Pages et /api/* passent par le site Next.
+	reverse_proxy site:3000
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
 	}
+}
+
+{$DOMAINE_ADMIN} {
+	encode zstd gzip
+
+	@backoffice path /{$DJANGO_CHEMIN_ADMIN}* /static/* /api/exercices /api/exercices/* /api/docs /api/docs/* /api/schema /api/schema/* /api/redoc /api/redoc/*
+	handle @backoffice {
+		reverse_proxy moteur:8000
+	}
+	respond 404
 
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"

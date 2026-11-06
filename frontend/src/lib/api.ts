@@ -63,6 +63,9 @@ export interface ExerciceBibliotheque {
   enonce: string;
   ordre: number;
   principal: boolean;
+  /** Classement de la banque d'exercices (null si l'exercice n'a pas de fiche). */
+  niveau: "debutant" | "intermediaire" | "avance" | null;
+  difficulte: number | null;
   accessible: boolean;
   tentative_en_cours: string | null;
   reussi: boolean;
@@ -173,6 +176,8 @@ export type Soumission =
   | { valide: false; message: string; console: string[] }
   | {
       valide: true;
+      /** Exercice d'entraînement : réussi, mais sans effet sur la carte de maîtrise (CDC-1). */
+      entrainement?: boolean;
       recompense: { notion: Notion; python: string | null };
       nouvelles_notions: Notion[];
     };

@@ -277,7 +277,7 @@ export function Laboratoire({
         {/* ALGORITHM EDITOR */}
         <section aria-label="Éditeur d'algorithme" className="flex min-w-0 flex-col gap-4 p-4 sm:p-6 lg:w-[var(--part)] lg:overflow-y-auto">
           <div className="rounded-2xl border border-border bg-surface px-4 py-3">
-            <p className="text-sm">{exercice.enonce}</p>
+            <p className="whitespace-pre-line text-sm">{exercice.enonce}</p>
             {Object.keys(exercice.entrees).length > 0 && (
               <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
                 Données :

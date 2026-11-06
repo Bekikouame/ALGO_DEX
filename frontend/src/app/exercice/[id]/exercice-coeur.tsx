@@ -87,7 +87,12 @@ function GuideNotion({ notion }: { notion: Notion }) {
         <div className="mb-3 flex items-center gap-2 font-semibold">
           <CircleHelp size={18} className="text-primary" /> Aide & explications
         </div>
-        <p className="text-sm">{guide.idee}</p>
+        <p className="font-display text-xl leading-snug">{guide.titre}</p>
+        <div className="mt-2 flex flex-col gap-2 text-sm">
+          {guide.texte.slice(0, -1).map((t) => (
+            <p key={t}>{t}</p>
+          ))}
+        </div>
         <PseudoCode
           lignes={guide.code.map((texte, k) => ({ ligne: k + 1, texte }))}
           titre={`Exemple · ${LIBELLES_NOTION[notion].toLowerCase()}`}
@@ -119,8 +124,8 @@ function GuideNotion({ notion }: { notion: Notion }) {
         </div>
       </div>
       <div className="rounded-2xl border border-warning/30 bg-warning-soft p-5">
-        <div className="mb-1 font-semibold text-warning">Où regarder</div>
-        <p className="text-sm">{guide.regarder}</p>
+        <div className="mb-1 font-semibold text-warning">Attention</div>
+        <p className="text-sm">{guide.texte[guide.texte.length - 1]}</p>
       </div>
     </>
   );
@@ -128,6 +133,7 @@ function GuideNotion({ notion }: { notion: Notion }) {
 
 /** Récompense sobre de fin de notion (F9) : le même algorithme, en Python, en lecture seule. */
 function Recompense({ reussite, cockpit }: { reussite: Reussite; cockpit: Cockpit | null }) {
+  const entrainement = !!reussite.entrainement;
   const suivant = cockpit?.exercices.find((e) => e.notion === cockpit.prochaine_notion && e.accessible);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="titre-reussite">
@@ -138,9 +144,13 @@ function Recompense({ reussite, cockpit }: { reussite: Reussite; cockpit: Cockpi
           </span>
           <div>
             <h2 id="titre-reussite" className="font-display text-3xl font-semibold">
-              {LIBELLES_NOTION[reussite.recompense.notion]} : validée
+              {entrainement ? "Exercice réussi" : `${LIBELLES_NOTION[reussite.recompense.notion]} : validée`}
             </h2>
-            <p className="text-sm text-muted">Tu as fait tout le chemin : écrire, prédire, voir, comparer, corriger.</p>
+            <p className="text-sm text-muted">
+              {entrainement
+                ? "Tu as fait tout le chemin. C'est un entraînement : la notion se valide avec son exercice du parcours."
+                : "Tu as fait tout le chemin : écrire, prédire, voir, comparer, corriger."}
+            </p>
           </div>
         </div>
 
@@ -155,7 +165,11 @@ function Recompense({ reussite, cockpit }: { reussite: Reussite; cockpit: Cockpi
         )}
 
         <div className="mt-6 flex flex-wrap gap-3">
-          {suivant ? (
+          {entrainement ? (
+            <Link href="/ressources/exercices" className="flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-on-primary">
+              D&apos;autres exercices <ArrowRight size={16} />
+            </Link>
+          ) : suivant ? (
             <Link href={`/exercice/${suivant.id}`} className="flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-on-primary">
               Notion suivante : {LIBELLES_NOTION[suivant.notion]} <ArrowRight size={16} />
             </Link>
@@ -164,9 +178,15 @@ function Recompense({ reussite, cockpit }: { reussite: Reussite; cockpit: Cockpi
               Retour au parcours <ArrowRight size={16} />
             </Link>
           )}
-          <Link href="/langages" className="flex items-center gap-2 rounded-xl border border-border px-5 py-3 text-sm font-medium">
-            <Languages size={16} /> Les quatre langages
-          </Link>
+          {entrainement ? (
+            <Link href="/parcours" className="flex items-center gap-2 rounded-xl border border-border px-5 py-3 text-sm font-medium">
+              Retour au parcours
+            </Link>
+          ) : (
+            <Link href="/langages" className="flex items-center gap-2 rounded-xl border border-border px-5 py-3 text-sm font-medium">
+              <Languages size={16} /> Les quatre langages
+            </Link>
+          )}
         </div>
       </div>
     </div>

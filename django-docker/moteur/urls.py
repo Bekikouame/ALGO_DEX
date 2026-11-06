@@ -12,6 +12,7 @@ urlpatterns = [
     path("cours", views.CoursView.as_view()),
     path("cockpit", views.CockpitView.as_view()),
     path("bibliotheque", views.BibliothequeView.as_view()),
+    path("banque", views.BanqueView.as_view()),
     path("executer", views.ExecuterView.as_view()),
     path("tentative", views.TentativeView.as_view()),
     path("tentative/<uuid:pk>", views.TentativeDetailView.as_view()),

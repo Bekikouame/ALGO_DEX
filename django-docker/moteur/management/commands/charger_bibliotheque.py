@@ -198,7 +198,7 @@ EXERCICES = [
     },
     {
         "notion": "conditions", "ordre": 6,
-        "titre": "La mention",
+        "titre": "La mention détaillée",
         "enonce": "Une note sur 20 est fournie. Range la mention dans une variable mention : \"très bien\" à partir "
                   "de 16, \"bien\" à partir de 14, \"assez bien\" à partir de 12, \"passable\" à partir de 10, "
                   "\"ajourné\" sinon. Range aussi dans admis le booléen note ≥ 10. Affiche mention.",

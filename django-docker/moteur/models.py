@@ -163,3 +163,63 @@ class ChapitreLu(models.Model):
 
     def __str__(self):
         return f"{self.profil} · {self.chapitre}"
+
+
+# --------------------------------------------------------------------------
+# Banque d'exercices : le catalogue pédagogique complet, au-delà de la V1
+# --------------------------------------------------------------------------
+
+NIVEAUX = ["debutant", "intermediaire", "avance"]
+# Notions de la banque : les quatre de la V1, puis celles des documents sources (V1.1 et au-delà).
+NOTIONS_BANQUE = NOTIONS + [
+    "chaines", "fonctions", "recursivite", "tableaux_2d", "complexite", "enregistrements",
+    "fichiers", "pointeurs", "listes_chainees", "piles_files", "arbres", "graphes", "hachage", "objets",
+]
+
+
+class ExerciceBanque(models.Model):
+    """Une fiche d'exercice tirée des documents pédagogiques.
+
+    Elle existe pour tout exercice retenu, même hors de ce que le moteur sait exécuter.
+    Quand l'exercice est jouable dans le laboratoire, `exercice` pointe vers sa version exécutable
+    (blocs, points de contrôle, indices validés par le moteur)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    cle = models.SlugField(max_length=60, unique=True, help_text="Identifiant stable de la source (ex. bouchiha-3-21).")
+    titre = models.CharField(max_length=120)
+    description = models.CharField(max_length=240)
+    enonce = models.TextField()
+    consignes = models.TextField(blank=True, default="")
+    niveau = models.CharField(max_length=14, choices=_choix(NIVEAUX))
+    difficulte = models.PositiveSmallIntegerField()
+    notion = models.CharField(max_length=20, choices=_choix(NOTIONS_BANQUE))
+    notions_secondaires = models.JSONField(default=list, blank=True)
+    objectifs = models.JSONField(default=list)
+    prerequis = models.JSONField(default=list, blank=True)
+    exemples = models.JSONField(default=list, blank=True, help_text="[{\"entree\": …, \"sortie\": …}]")
+    indices = models.JSONField(default=list, blank=True)
+    solution = models.TextField(blank=True, default="", help_text="Pseudo-code de la correction.")
+    solution_verifiee = models.BooleanField(default=False, help_text="Vrai si la correction a été exécutée par le moteur.")
+    complexite = models.JSONField(default=dict, blank=True, help_text="{\"temps\": \"O(n)\", \"espace\": \"O(1)\"}")
+    source = models.JSONField(help_text="{document, auteur, chapitre, numero, nature : reprise | reformulation | variante}")
+    tags = models.JSONField(default=list, blank=True)
+    remarques = models.TextField(blank=True, default="", help_text="Ambiguïtés de la source et choix retenus.")
+    exercice = models.OneToOneField(
+        Exercice, null=True, blank=True, on_delete=models.SET_NULL, related_name="fiche", db_column="exercice_id"
+    )
+    actif = models.BooleanField(default=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_maj = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "exercice_banque"
+        ordering = ["notion", "niveau", "difficulte", "titre"]
+        constraints = [
+            models.CheckConstraint(condition=Q(niveau__in=NIVEAUX), name="banque_niveau_valide"),
+            models.CheckConstraint(condition=Q(difficulte__gte=1, difficulte__lte=5), name="banque_difficulte_1_5"),
+            models.CheckConstraint(condition=Q(notion__in=NOTIONS_BANQUE), name="banque_notion_valide"),
+        ]
+        indexes = [models.Index(fields=["notion", "niveau", "difficulte"], name="idx_banque_filtres")]
+
+    def __str__(self):
+        return f"[{self.notion}/{self.niveau}/{self.difficulte}] {self.titre}"

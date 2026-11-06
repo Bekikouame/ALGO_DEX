@@ -5,7 +5,15 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { MessageErreur } from "@/components/coque";
 import { SceneNotion } from "@/components/espace/illustrations";
-import { CarteExercice, chapitreDeNotion, etatExercice, LIBELLES_ETAT, type EtatExercice } from "@/components/ressources/carte-exercice";
+import {
+  CarteExercice,
+  chapitreDeNotion,
+  etatExercice,
+  LIBELLES_ETAT,
+  LIBELLES_NIVEAU,
+  ordreDifficulte,
+  type EtatExercice,
+} from "@/components/ressources/carte-exercice";
 import { CoqueRessources } from "@/components/ressources/coque-ressources";
 import { api, LIBELLES_NOTION, NOTIONS, type ExerciceBibliotheque, type Notion } from "@/lib/api";
 import { useProfilActif } from "@/lib/profils";
@@ -20,6 +28,8 @@ export default function BibliothequeExercices() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [notion, setNotion] = useState<Notion | "toutes">("toutes");
   const [etat, setEtat] = useState<EtatExercice | "tous">("tous");
+  const [niveau, setNiveau] = useState<keyof typeof LIBELLES_NIVEAU | "tous">("tous");
+  const [difficulte, setDifficulte] = useState<number | null>(null);
   const [requete, setRequete] = useState("");
 
   useEffect(() => {
@@ -40,6 +50,8 @@ export default function BibliothequeExercices() {
     (e) =>
       (notion === "toutes" || e.notion === notion) &&
       (etat === "tous" || etatExercice(e) === etat) &&
+      (niveau === "tous" || e.niveau === niveau) &&
+      (difficulte === null || e.difficulte === difficulte) &&
       (!q || sansAccents(`${e.titre} ${e.enonce}`).includes(q)),
   );
   const reussis = tous.filter((e) => e.reussi).length;
@@ -127,6 +139,39 @@ export default function BibliothequeExercices() {
           ))}
         </div>
       </div>
+      <div className="mt-icone flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Niveau">
+          {(["tous", "debutant", "intermediaire", "avance"] as const).map((x) => (
+            <button
+              key={x}
+              type="button"
+              aria-pressed={niveau === x}
+              onClick={() => setNiveau(x)}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                niveau === x ? "bg-primary text-on-primary" : "border border-border bg-surface text-text/75 hover:text-primary"
+              }`}
+            >
+              {x === "tous" ? "Tous les niveaux" : LIBELLES_NIVEAU[x]}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1.5 sm:ml-3" role="group" aria-label="Difficulté sur 5">
+          <span className="text-sm text-muted">Difficulté</span>
+          {[1, 2, 3, 4, 5].map((d) => (
+            <button
+              key={d}
+              type="button"
+              aria-pressed={difficulte === d}
+              onClick={() => setDifficulte(difficulte === d ? null : d)}
+              className={`h-8 w-8 rounded-full text-sm font-semibold transition-colors ${
+                difficulte === d ? "bg-primary text-on-primary" : "border border-border bg-surface text-text/75 hover:text-primary"
+              }`}
+            >
+              {d}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {erreur && (
         <div className="mt-6">
@@ -154,6 +199,7 @@ export default function BibliothequeExercices() {
               <ul className="mt-bloc grid gap-bloc sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {visibles
                   .filter((e) => e.notion === n)
+                  .sort(ordreDifficulte)
                   .map((e) => (
                     <li key={e.id}>
                       <CarteExercice exercice={e} avecChapitre={false} />

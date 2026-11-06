@@ -60,3 +60,6 @@ yarn-error.log*
 
 # Ancienne copie de dépôt Git, sans rapport avec le projet
 django-docker/.git_backup/
+
+# Exports de la base de production
+deploiement/sauvegardes/

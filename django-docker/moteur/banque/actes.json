@@ -1,0 +1,1127 @@
+[
+ {
+  "cle": "express-variables-1",
+  "type": "express",
+  "notion": "variables",
+  "ordre": 1,
+  "titre": "La chaîne d'affectations",
+  "enonce": "Alex commence avec x = 2 et y = 5. L'algorithme ci-dessous enchaîne trois affectations. Déroule-le DANS TA TÊTE, ligne par ligne, puis prédis la valeur des variables aux moments demandés et les deux lignes affichées. Une seule variable change à chaque ligne.",
+  "entrees": {
+   "x": 2,
+   "y": 5
+  },
+  "blocs": [
+   {
+    "type": "affectation",
+    "variable": "x",
+    "valeur": "x + y"
+   },
+   {
+    "type": "affectation",
+    "variable": "y",
+    "valeur": "x - y"
+   },
+   {
+    "type": "affectation",
+    "variable": "x",
+    "valeur": "x * y"
+   },
+   {
+    "type": "ecrire",
+    "valeurs": [
+     "\"x vaut\"",
+     "x"
+    ]
+   },
+   {
+    "type": "ecrire",
+    "valeurs": [
+     "\"y vaut\"",
+     "y"
+    ]
+   }
+  ],
+  "points_controle": [
+   {
+    "id": "p1",
+    "question": "Juste après la 1re affectation (x ← x + y) : que vaut x ?",
+    "variable": "x",
+    "moment": {
+     "type": "affectation",
+     "numero": 1
+    }
+   },
+   {
+    "id": "p2",
+    "question": "Juste après la 2e affectation (y ← x - y) : que vaut y ?",
+    "variable": "y",
+    "moment": {
+     "type": "affectation",
+     "numero": 1
+    }
+   },
+   {
+    "id": "p3",
+    "question": "À la toute fin : que vaut x ?",
+    "variable": "x",
+    "moment": {
+     "type": "fin"
+    }
+   }
+  ],
+  "indices": [
+   "Regarde la 2e ligne : y ← x - y. Le x utilisé ici, est-ce l'ancien x (2) ou le nouveau ? Une affectation utilise toujours les valeurs TOUT JUSTE mises à jour.",
+   "Décompose : (1) x devient x + y. (2) y devient [nouveau x] − y. (3) x devient [nouveau x] × [nouveau y]. Écris la valeur de x et de y après CHAQUE ligne sur papier.",
+   {
+    "texte": "Commence par la première ligne, elle est donnée :",
+    "blocs": [
+     {
+      "type": "affectation",
+      "variable": "x",
+      "valeur": "x + y"
+     }
+    ]
+   },
+   "Lance le déroulement guidé ci-dessous : la machine trace l'algorithme ligne par ligne. Observe comment x et y évoluent, puis refais le tracé toi-même."
+  ],
+  "sorties_langages": {
+   "python": "x = 2\ny = 5\nx = x + y\ny = x - y\nx = x * y\nprint(\"x vaut\", x)\nprint(\"y vaut\", y)",
+   "javascript": "let x = 2;\nlet y = 5;\nx = x + y;\ny = x - y;\nx = x * y;\nconsole.log(\"x vaut \" + x);\nconsole.log(\"y vaut \" + y);",
+   "java": "int x = 2;\nint y = 5;\nx = x + y;\ny = x - y;\nx = x * y;\nSystem.out.println(\"x vaut \" + x);\nSystem.out.println(\"y vaut \" + y);",
+   "c": "int x = 2;\nint y = 5;\nx = x + y;\ny = x - y;\nx = x * y;\nprintf(\"x vaut %d\\n\", x);\nprintf(\"y vaut %d\\n\", y);"
+  }
+ },
+ {
+  "cle": "express-variables-2",
+  "type": "express",
+  "notion": "variables",
+  "ordre": 2,
+  "titre": "La caisse du magasin",
+  "enonce": "Un client achète prix = 12 unités à quantite = 3 exemplaires. L'algorithme calcule le total, applique une remise de 6, puis calcule le rendu sur un billet rond (reste de la division par 4). Prédis les valeurs aux moments demandés et les lignes affichées.",
+  "entrees": {
+   "prix": 12,
+   "quantite": 3
+  },
+  "blocs": [
+   {
+    "type": "affectation",
+    "variable": "total",
+    "valeur": "prix * quantite"
+   },
+   {
+    "type": "affectation",
+    "variable": "total",
+    "valeur": "total - 6"
+   },
+   {
+    "type": "affectation",
+    "variable": "rendu",
+    "valeur": "total mod 4"
+   },
+   {
+    "type": "ecrire",
+    "valeurs": [
+     "\"Total :\"",
+     "total"
+    ]
+   },
+   {
+    "type": "ecrire",
+    "valeurs": [
+     "\"Rendu :\"",
+     "rendu"
+    ]
+   }
+  ],
+  "points_controle": [
+   {
+    "id": "p1",
+    "question": "Juste après le calcul du total de départ : que vaut total ?",
+    "variable": "total",
+    "moment": {
+     "type": "affectation",
+     "numero": 1
+    }
+   },
+   {
+    "id": "p2",
+    "question": "Juste après la remise de 6 : que vaut total ?",
+    "variable": "total",
+    "moment": {
+     "type": "affectation",
+     "numero": 2
+    }
+   },
+   {
+    "id": "p3",
+    "question": "À la toute fin : que vaut rendu ?",
+    "variable": "rendu",
+    "moment": {
+     "type": "fin"
+    }
+   }
+  ],
+  "indices": [
+   "« mod » est le RESTE d'une division. 30 mod 4 : combien reste-t-il quand on retire les paquets de 4 ?",
+   "Trois calculs successifs : total = prix × quantite, puis total = total − 6, puis rendu = reste de total ÷ 4. Fais chaque calcul séparément.",
+   {
+    "texte": "La première ligne est donnée — continue à partir d'elle :",
+    "blocs": [
+     {
+      "type": "affectation",
+      "variable": "total",
+      "valeur": "prix * quantite"
+     }
+    ]
+   },
+   "Lance le déroulement guidé ci-dessous et observe la colonne des variables changer à chaque ligne."
+  ],
+  "sorties_langages": {
+   "python": "prix = 12\nquantite = 3\ntotal = prix * quantite\ntotal = total - 6\nrendu = total % 4\nprint(\"Total :\", total)\nprint(\"Rendu :\", rendu)",
+   "javascript": "let prix = 12;\nlet quantite = 3;\nlet total = prix * quantite;\ntotal = total - 6;\nlet rendu = total % 4;\nconsole.log(\"Total : \" + total);\nconsole.log(\"Rendu : \" + rendu);",
+   "java": "int prix = 12;\nint quantite = 3;\nint total = prix * quantite;\ntotal = total - 6;\nint rendu = total % 4;\nSystem.out.println(\"Total : \" + total);\nSystem.out.println(\"Rendu : \" + rendu);",
+   "c": "int prix = 12;\nint quantite = 3;\nint total = prix * quantite;\ntotal = total - 6;\nint rendu = total % 4;\nprintf(\"Total : %d\\n\", total);\nprintf(\"Rendu : %d\\n\", rendu);"
+  }
+ },
+ {
+  "cle": "express-conditions-1",
+  "type": "express",
+  "notion": "conditions",
+  "ordre": 1,
+  "titre": "Pair ou impair ?",
+  "enonce": "L'algorithme teste n = 7 et range le verdict dans la variable reponse. Attention : UNE SEULE des deux branches va s'exécuter. Prédis laquelle, la valeur de reponse après le 1er affichage, et les lignes affichées.",
+  "entrees": {
+   "n": 7
+  },
+  "blocs": [
+   {
+    "type": "si",
+    "condition": "n mod 2 = 0",
+    "alors": [
+     {
+      "type": "affectation",
+      "variable": "reponse",
+      "valeur": "\"pair\""
+     }
+    ],
+    "sinon": [
+     {
+      "type": "affectation",
+      "variable": "reponse",
+      "valeur": "\"impair\""
+     }
+    ]
+   },
+   {
+    "type": "ecrire",
+    "valeurs": [
+     "reponse"
+    ]
+   },
+   {
+    "type": "ecrire",
+    "valeurs": [
+     "\"fin du test\""
+    ]
+   }
+  ],
+  "points_controle": [
+   {
+    "id": "p1",
+    "question": "Après le test, au moment de l'affichage : que vaut reponse ?",
+    "variable": "reponse",
+    "moment": {
+     "type": "fin"
+    }
+   },
+   {
+    "id": "p2",
+    "question": "À la toute fin : que vaut n ?",
+    "variable": "n",
+    "moment": {
+     "type": "fin"
+    }
+   }
+  ],
+  "indices": [
+   "7 mod 2, ça vaut combien ? Et « = 0 », c'est vrai ou faux pour ce résultat ?",
+   "Étape 1 : calcule 7 mod 2 (le reste de 7 ÷ 2). Étape 2 : la condition « reste = 0 » est-elle vraie ? Étape 3 : seule la branche correspondante s'exécute.",
+   {
+    "texte": "Le squelette de la décision est donné — complète mentalement les branches :",
+    "blocs": [
+     {
+      "type": "si",
+      "condition": "n mod 2 = 0",
+      "alors": [],
+      "sinon": []
+     }
+    ]
+   },
+   "Lance le déroulement guidé ci-dessous : observe quelle branche la machine emprunte et pourquoi."
+  ],
+  "sorties_langages": {
+   "python": "n = 7\nif n % 2 == 0:\n    reponse = \"pair\"\nelse:\n    reponse = \"impair\"\nprint(reponse)\nprint(\"fin du test\")",
+   "javascript": "let n = 7;\nlet reponse;\nif (n % 2 === 0) {\n  reponse = \"pair\";\n} else {\n  reponse = \"impair\";\n}\nconsole.log(reponse);\nconsole.log(\"fin du test\");",
+   "java": "int n = 7;\nString reponse;\nif (n % 2 == 0) {\n  reponse = \"pair\";\n} else {\n  reponse = \"impair\";\n}\nSystem.out.println(reponse);\nSystem.out.println(\"fin du test\");",
+   "c": "int n = 7;\nchar reponse[10];\nif (n % 2 == 0) {\n  strcpy(reponse, \"pair\");\n} else {\n  strcpy(reponse, \"impair\");\n}\nprintf(\"%s\\n\", reponse);\nprintf(\"fin du test\\n\");"
+  }
+ },
+ {
+  "cle": "express-conditions-2",
+  "type": "express",
+  "notion": "conditions",
+  "ordre": 2,
+  "titre": "La mention",
+  "enonce": "Un examen : note = 12. Le si EXTÉRIEUR teste la réussite ; à l'intérieur, un DEUXIÈME si distingue la mention. Prédis quelle branche s'exécute à chaque niveau, la valeur de mention après le 1er affichage, et la ligne affichée.",
+  "entrees": {
+   "note": 12
+  },
+  "blocs": [
+   {
+    "type": "si",
+    "condition": "note ≥ 10",
+    "alors": [
+     {
+      "type": "si",
+      "condition": "note ≥ 16",
+      "alors": [
+       {
+        "type": "affectation",
+        "variable": "mention",
+        "valeur": "\"très bien\""
+       }
+      ],
+      "sinon": [
+       {
+        "type": "affectation",
+        "variable": "mention",
+        "valeur": "\"passable\""
+       }
+      ]
+     }
+    ],
+    "sinon": [
+     {
+      "type": "affectation",
+      "variable": "mention",
+      "valeur": "\"refusé\""
+     }
+    ]
+   },
+   {
+    "type": "ecrire",
+    "valeurs": [
+     "\"Résultat :\"",
+     "mention"
+    ]
+   }
+  ],
+  "points_controle": [
+   {
+    "id": "p1",
+    "question": "Après les deux tests, au moment de l'affichage : que vaut mention ?",
+    "variable": "mention",
+    "moment": {
+     "type": "fin"
+    }
+   },
+   {
+    "id": "p2",
+    "question": "À la toute fin : que vaut note ?",
+    "variable": "note",
+    "moment": {
+     "type": "fin"
+    }
+   }
+  ],
+  "indices": [
+   "12 >= 10 ? Oui. Donc on ENTRE dans la première branche… et à l'intérieur, 12 >= 16 ?",
+   "Deux portes successives : la porte extérieure (note ≥ 10) puis, seulement si elle est franchie, la porte intérieure (note ≥ 16). Pour note = 12 : la première s'ouvre, la deuxième non.",
+   {
+    "texte": "La structure imbriquée est donnée — suis-la de l'extérieur vers l'intérieur :",
+    "blocs": [
+     {
+      "type": "si",
+      "condition": "note ≥ 10",
+      "alors": [
+       {
+        "type": "si",
+        "condition": "note ≥ 16",
+        "alors": [],
+        "sinon": []
+       }
+      ],
+      "sinon": []
+     }
+    ]
+   },
+   "Lance le déroulement guidé ci-dessous : la machine montre quel « si » est évalué et quelle branche prend le relais."
+  ],
+  "sorties_langages": {
+   "python": "note = 12\nif note >= 10:\n    if note >= 16:\n        mention = \"très bien\"\n    else:\n        mention = \"passable\"\nelse:\n    mention = \"refusé\"\nprint(\"Résultat :\", mention)",
+   "javascript": "let note = 12;\nlet mention;\nif (note >= 10) {\n  if (note >= 16) {\n    mention = \"très bien\";\n  } else {\n    mention = \"passable\";\n  }\n} else {\n  mention = \"refusé\";\n}\nconsole.log(\"Résultat : \" + mention);",
+   "java": "int note = 12;\nString mention;\nif (note >= 10) {\n  if (note >= 16) {\n    mention = \"très bien\";\n  } else {\n    mention = \"passable\";\n  }\n} else {\n  mention = \"refusé\";\n}\nSystem.out.println(\"Résultat : \" + mention);",
+   "c": "int note = 12;\nchar mention[20];\nif (note >= 10) {\n  if (note >= 16) {\n    strcpy(mention, \"très bien\");\n  } else {\n    strcpy(mention, \"passable\");\n  }\n} else {\n  strcpy(mention, \"refusé\");\n}\nprintf(\"Résultat : %s\\n\", mention);"
+  }
+ },
+ {
+  "cle": "express-boucles-1",
+  "type": "express",
+  "notion": "boucles",
+  "ordre": 1,
+  "titre": "L'escalier des sommes",
+  "enonce": "L'algorithme additionne tous les nombres de 1 à n (ici n = 5) grâce à un accumulateur somme. Prédis la valeur de somme après le 2e puis le 4e passage dans la boucle, la valeur de i au début du 3e tour, et la ligne affichée. Suis i et somme en parallèle, tour par tour.",
+  "entrees": {
+   "n": 5
+  },
+  "blocs": [
+   {
+    "type": "affectation",
+    "variable": "somme",
+    "valeur": "0"
+   },
+   {
+    "type": "pour",
+    "variable": "i",
+    "debut": "1",
+    "fin": "n",
+    "pas": "1",
+    "corps": [
+     {
+      "type": "affectation",
+      "variable": "somme",
+      "valeur": "somme + i"
+     }
+    ]
+   },
+   {
+    "type": "ecrire",
+    "valeurs": [
+     "\"Somme :\"",
+     "somme"
+    ]
+   }
+  ],
+  "points_controle": [
+   {
+    "id": "p1",
+    "question": "Juste après le 2e passage dans la boucle (i vaut alors 2) : que vaut somme ?",
+    "variable": "somme",
+    "moment": {
+     "type": "iteration",
+     "numero": 2
+    }
+   },
+   {
+    "id": "p2",
+    "question": "Pendant le 3e tour : que vaut i ?",
+    "variable": "i",
+    "moment": {
+     "type": "iteration",
+     "numero": 3
+    }
+   },
+   {
+    "id": "p3",
+    "question": "Juste après le 4e passage dans la boucle : que vaut somme ?",
+    "variable": "somme",
+    "moment": {
+     "type": "iteration",
+     "numero": 4
+    }
+   },
+   {
+    "id": "p4",
+    "question": "À la toute fin : que vaut somme ?",
+    "variable": "somme",
+    "moment": {
+     "type": "fin"
+    }
+   }
+  ],
+  "indices": [
+   "Au tour 1 : somme = 0 + 1. Au tour 2 : somme = [résultat du tour 1] + 2. Continue la chaîne.",
+   "Prépare un petit tableau à deux colonnes : i | somme. Remplis-le tour par tour : le i avance de 1 à chaque tour, la somme absorbe le i du tour.",
+   {
+    "texte": "Le tour 1 est déjà fait ici — continue le tableau jusqu'à i = 5 :",
+    "blocs": [
+     {
+      "type": "affectation",
+      "variable": "somme",
+      "valeur": "0"
+     },
+     {
+      "type": "pour",
+      "variable": "i",
+      "debut": "1",
+      "fin": "1",
+      "pas": "1",
+      "corps": [
+       {
+        "type": "affectation",
+        "variable": "somme",
+        "valeur": "somme + i"
+       }
+      ]
+     }
+    ]
+   },
+   "Lance le déroulement guidé ci-dessous : la machine remplit i et somme tour par tour. Recopie ensuite le tableau de tête."
+  ],
+  "sorties_langages": {
+   "python": "n = 5\nsomme = 0\nfor i in range(1, n + 1):\n    somme = somme + i\nprint(\"Somme :\", somme)",
+   "javascript": "let n = 5;\nlet somme = 0;\nfor (let i = 1; i <= n; i++) {\n  somme = somme + i;\n}\nconsole.log(\"Somme : \" + somme);",
+   "java": "int n = 5;\nint somme = 0;\nfor (int i = 1; i <= n; i++) {\n  somme = somme + i;\n}\nSystem.out.println(\"Somme : \" + somme);",
+   "c": "int n = 5;\nint somme = 0;\nfor (int i = 1; i <= n; i++) {\n  somme = somme + i;\n}\nprintf(\"Somme : %d\\n\", somme);"
+  }
+ },
+ {
+  "cle": "express-boucles-2",
+  "type": "express",
+  "notion": "boucles",
+  "ordre": 2,
+  "titre": "Le compte à rebours",
+  "enonce": "Décollage ! compteur part de 3 et l'algorithme affiche chaque valeur puis le décrémente, TANT QUE compteur > 0. Prédis la valeur de compteur après la 2e décrémentation, au moment où la boucle s'arrête, à la fin, et toutes les lignes affichées.",
+  "entrees": {
+   "depart": 3
+  },
+  "blocs": [
+   {
+    "type": "affectation",
+    "variable": "compteur",
+    "valeur": "depart"
+   },
+   {
+    "type": "tant_que",
+    "condition": "compteur > 0",
+    "corps": [
+     {
+      "type": "ecrire",
+      "valeurs": [
+       "compteur"
+      ]
+     },
+     {
+      "type": "affectation",
+      "variable": "compteur",
+      "valeur": "compteur - 1"
+     }
+    ]
+   },
+   {
+    "type": "ecrire",
+    "valeurs": [
+     "\"Décollage !\""
+    ]
+   }
+  ],
+  "points_controle": [
+   {
+    "id": "p1",
+    "question": "Juste après la 2e décrémentation (compteur ← compteur - 1, 2e fois) : que vaut compteur ?",
+    "variable": "compteur",
+    "moment": {
+     "type": "iteration",
+     "numero": 2
+    }
+   },
+   {
+    "id": "p2",
+    "question": "À la fin du dernier tour, juste avant que le « tant que » fasse sortir de la boucle : que vaut compteur ?",
+    "variable": "compteur",
+    "moment": {
+     "type": "iteration",
+     "numero": 3
+    }
+   },
+   {
+    "id": "p3",
+    "question": "À la toute fin : que vaut compteur ?",
+    "variable": "compteur",
+    "moment": {
+     "type": "fin"
+    }
+   }
+  ],
+  "indices": [
+   "La condition est testée À CHAQUE tour. Compte les tests : compteur vaut 3, puis 2, puis 1, puis… quel test fait sortir ?",
+   "Ordre exact d'un tour : (1) tester la condition, (2) afficher compteur, (3) décrémenter. Quand la condition devient fausse, on saute à la ligne après la boucle.",
+   {
+    "texte": "L'ossature de la boucle est donnée — déroule les tours dans ta tête :",
+    "blocs": [
+     {
+      "type": "affectation",
+      "variable": "compteur",
+      "valeur": "depart"
+     },
+     {
+      "type": "tant_que",
+      "condition": "compteur > 0",
+      "corps": []
+     }
+    ]
+   },
+   "Lance le déroulement guidé ci-dessous : regarde le test de condition à chaque tour et le moment exact de la sortie."
+  ],
+  "sorties_langages": {
+   "python": "depart = 3\ncompteur = depart\nwhile compteur > 0:\n    print(compteur)\n    compteur = compteur - 1\nprint(\"Décollage !\")",
+   "javascript": "let depart = 3;\nlet compteur = depart;\nwhile (compteur > 0) {\n  console.log(compteur);\n  compteur = compteur - 1;\n}\nconsole.log(\"Décollage !\");",
+   "java": "int depart = 3;\nint compteur = depart;\nwhile (compteur > 0) {\n  System.out.println(compteur);\n  compteur = compteur - 1;\n}\nSystem.out.println(\"Décollage !\");",
+   "c": "int depart = 3;\nint compteur = depart;\nwhile (compteur > 0) {\n  printf(\"%d\\n\", compteur);\n  compteur = compteur - 1;\n}\nprintf(\"Décollage !\\n\");"
+  }
+ },
+ {
+  "cle": "express-tableaux-1",
+  "type": "express",
+  "notion": "tableaux",
+  "ordre": 1,
+  "titre": "La caisse du marché",
+  "enonce": "Le tableau prix contient 4 valeurs : [4, 7, 2, 9]. Les cases sont numérotées À PARTIR DE 0 : prix[0] = 4, prix[1] = 7, prix[2] = 2, prix[3] = 9. L'algorithme additionne tout dans total. Prédis total après le 2e passage, la valeur de i au début du 3e tour, et la ligne affichée.",
+  "entrees": {
+   "prix": [
+    4,
+    7,
+    2,
+    9
+   ]
+  },
+  "blocs": [
+   {
+    "type": "affectation",
+    "variable": "total",
+    "valeur": "0"
+   },
+   {
+    "type": "pour",
+    "variable": "i",
+    "debut": "0",
+    "fin": "3",
+    "pas": "1",
+    "corps": [
+     {
+      "type": "affectation",
+      "variable": "total",
+      "valeur": "total + prix[i]"
+     }
+    ]
+   },
+   {
+    "type": "ecrire",
+    "valeurs": [
+     "\"Total :\"",
+     "total"
+    ]
+   }
+  ],
+  "points_controle": [
+   {
+    "id": "p1",
+    "question": "Juste après le 2e passage dans la boucle (total a absorbé prix[0] et prix[1]) : que vaut total ?",
+    "variable": "total",
+    "moment": {
+     "type": "iteration",
+     "numero": 2
+    }
+   },
+   {
+    "id": "p2",
+    "question": "Pendant le 3e tour : que vaut i ?",
+    "variable": "i",
+    "moment": {
+     "type": "iteration",
+     "numero": 3
+    }
+   },
+   {
+    "id": "p3",
+    "question": "À la toute fin : que vaut total ?",
+    "variable": "total",
+    "moment": {
+     "type": "fin"
+    }
+   }
+  ],
+  "indices": [
+   "Tour 1 : total = 0 + prix[0] = 0 + 4. Tour 2 : total = 4 + prix[1]. Et prix[1], ça vaut combien ?",
+   "Tableau à deux colonnes : i | total. À chaque tour, total gagne la case prix[i]. Les cases vont de prix[0] à prix[3] (4 cases, numérotées 0 à 3).",
+   {
+    "texte": "Le tour 0 est fait ici — continue tour par tour :",
+    "blocs": [
+     {
+      "type": "affectation",
+      "variable": "total",
+      "valeur": "0"
+     },
+     {
+      "type": "pour",
+      "variable": "i",
+      "debut": "0",
+      "fin": "0",
+      "pas": "1",
+      "corps": [
+       {
+        "type": "affectation",
+        "variable": "total",
+        "valeur": "total + prix[i]"
+       }
+      ]
+     }
+    ]
+   },
+   "Lance le déroulement guidé ci-dessous et regarde quelle case du tableau entre dans total à chaque tour."
+  ],
+  "sorties_langages": {
+   "python": "prix = [4, 7, 2, 9]\ntotal = 0\nfor i in range(0, 4):\n    total = total + prix[i]\nprint(\"Total :\", total)",
+   "javascript": "let prix = [4, 7, 2, 9];\nlet total = 0;\nfor (let i = 0; i <= 3; i++) {\n  total = total + prix[i];\n}\nconsole.log(\"Total : \" + total);",
+   "java": "int[] prix = {4, 7, 2, 9};\nint total = 0;\nfor (int i = 0; i <= 3; i++) {\n  total = total + prix[i];\n}\nSystem.out.println(\"Total : \" + total);",
+   "c": "int prix[4] = {4, 7, 2, 9};\nint total = 0;\nfor (int i = 0; i <= 3; i++) {\n  total = total + prix[i];\n}\nprintf(\"Total : %d\\n\", total);"
+  }
+ },
+ {
+  "cle": "express-tableaux-2",
+  "type": "express",
+  "notion": "tableaux",
+  "ordre": 2,
+  "titre": "Le sommet",
+  "enonce": "Le tableau t = [5, 12, 3, 9]. L'algorithme garde dans max la plus grande valeur vue jusqu'ici : il démarre avec la case 0, puis compare chaque case suivante. Prédis max juste après la 1re mise à jour, la valeur de i au moment du 3e test, et la ligne affichée.",
+  "entrees": {
+   "t": [
+    5,
+    12,
+    3,
+    9
+   ]
+  },
+  "blocs": [
+   {
+    "type": "affectation",
+    "variable": "max",
+    "valeur": "t[0]"
+   },
+   {
+    "type": "pour",
+    "variable": "i",
+    "debut": "1",
+    "fin": "3",
+    "pas": "1",
+    "corps": [
+     {
+      "type": "si",
+      "condition": "t[i] > max",
+      "alors": [
+       {
+        "type": "affectation",
+        "variable": "max",
+        "valeur": "t[i]"
+       }
+      ],
+      "sinon": []
+     }
+    ]
+   },
+   {
+    "type": "ecrire",
+    "valeurs": [
+     "\"Max :\"",
+     "max"
+    ]
+   }
+  ],
+  "points_controle": [
+   {
+    "id": "p1",
+    "question": "Juste après la 1re mise à jour de max (la seule de cet exemple) : que vaut max ?",
+    "variable": "max",
+    "moment": {
+     "type": "affectation",
+     "numero": 2
+    }
+   },
+   {
+    "id": "p2",
+    "question": "Pendant le 3e test « si t[i] > max » : que vaut i ?",
+    "variable": "i",
+    "moment": {
+     "type": "iteration",
+     "numero": 3
+    }
+   },
+   {
+    "id": "p3",
+    "question": "À la toute fin : que vaut max ?",
+    "variable": "max",
+    "moment": {
+     "type": "fin"
+    }
+   }
+  ],
+  "indices": [
+   "max démarre à 5. Test i=1 : 12 > 5 ? Oui → max devient 12. Test i=2 : 3 > 12 ? Et i=3 : 9 > 12 ?",
+   "Colonnes : i | t[i] | test | max. Une seule comparaison est vraie dans cet exemple : celle qui fait monter max à 12.",
+   {
+    "texte": "Le départ est donné (max prend la case 0) — enchaîne les comparaisons :",
+    "blocs": [
+     {
+      "type": "affectation",
+      "variable": "max",
+      "valeur": "t[0]"
+     }
+    ]
+   },
+   "Lance le déroulement guidé ci-dessous : observe chaque comparaison et le moment (unique) où max change."
+  ],
+  "sorties_langages": {
+   "python": "t = [5, 12, 3, 9]\nmax = t[0]\nfor i in range(1, 4):\n    if t[i] > max:\n        max = t[i]\nprint(\"Max :\", max)",
+   "javascript": "let t = [5, 12, 3, 9];\nlet max = t[0];\nfor (let i = 1; i <= 3; i++) {\n  if (t[i] > max) {\n    max = t[i];\n  }\n}\nconsole.log(\"Max : \" + max);",
+   "java": "int[] t = {5, 12, 3, 9};\nint max = t[0];\nfor (int i = 1; i <= 3; i++) {\n  if (t[i] > max) {\n    max = t[i];\n  }\n}\nSystem.out.println(\"Max : \" + max);",
+   "c": "int t[4] = {5, 12, 3, 9};\nint max = t[0];\nfor (int i = 1; i <= 3; i++) {\n  if (t[i] > max) {\n    max = t[i];\n  }\n}\nprintf(\"Max : %d\\n\", max);"
+  }
+ },
+ {
+  "cle": "coeur-variables",
+  "type": "coeur",
+  "notion": "variables",
+  "ordre": 1,
+  "titre": "L'échange des clés",
+  "enonce": "Alex a deux poches : la poche gauche contient a = 4 jetons, la droite b = 9 jetons. Il veut ÉCHANGER les contenus : a doit finir à 9 et b à 4.\n\nContraintes : utilise une variable nommée temp comme poche temporaire, et termine ton algorithme par deux affichages. Ton algorithme doit afficher exactement :\na = 9\nb = 4",
+  "entrees": {
+   "a": 4,
+   "b": 9
+  },
+  "blocs": [
+   {
+    "type": "affectation",
+    "variable": "temp",
+    "valeur": "a"
+   },
+   {
+    "type": "affectation",
+    "variable": "a",
+    "valeur": "b"
+   },
+   {
+    "type": "affectation",
+    "variable": "b",
+    "valeur": "temp"
+   },
+   {
+    "type": "ecrire",
+    "valeurs": [
+     "\"a =\"",
+     "a"
+    ]
+   },
+   {
+    "type": "ecrire",
+    "valeurs": [
+     "\"b =\"",
+     "b"
+    ]
+   }
+  ],
+  "points_controle": [
+   {
+    "id": "p1",
+    "question": "À la fin : que vaut a ?",
+    "variable": "a",
+    "moment": {
+     "type": "fin"
+    }
+   },
+   {
+    "id": "p2",
+    "question": "À la fin : que vaut b ?",
+    "variable": "b",
+    "moment": {
+     "type": "fin"
+    }
+   },
+   {
+    "id": "p3",
+    "question": "À la toute fin : que vaut temp ?",
+    "variable": "temp",
+    "moment": {
+     "type": "fin"
+    }
+   }
+  ],
+  "indices": [
+   "Essaie l'idée naïve dans ta tête : a ← b, puis b ← a. Après la 1re ligne, a vaut 9… et après la 2e, b vaut quoi ? Que s'est-il perdu ?",
+   "Le problème : écraser a détruit l'information 4. Il faut la MÉMORISER ailleurs avant. Une 3e variable, temp, sert de boîte de sauvegarde : (1) sauvegarder a, (2) remplir a avec b, (3) restaurer b depuis temp.",
+   {
+    "texte": "Le premier pas est donné — la sauvegarde. Continue avec les deux lignes suivantes :",
+    "blocs": [
+     {
+      "type": "affectation",
+      "variable": "temp",
+      "valeur": "a"
+     }
+    ]
+   },
+   "Le déroulement guidé ci-dessous montre la solution pas à pas. Regarde-le une fois, PUIS reconstruis-le toi-même dans l'éditeur (le guidé ne se copie pas)."
+  ],
+  "sorties_langages": {
+   "python": "a = 4\nb = 9\ntemp = a\na = b\nb = temp\nprint(\"a =\", a)\nprint(\"b =\", b)",
+   "javascript": "let a = 4;\nlet b = 9;\nlet temp = a;\na = b;\nb = temp;\nconsole.log(\"a = \" + a);\nconsole.log(\"b = \" + b);",
+   "java": "int a = 4;\nint b = 9;\nint temp = a;\na = b;\nb = temp;\nSystem.out.println(\"a = \" + a);\nSystem.out.println(\"b = \" + b);",
+   "c": "int a = 4;\nint b = 9;\nint temp = a;\na = b;\nb = temp;\nprintf(\"a = %d\\n\", a);\nprintf(\"b = %d\\n\", b);"
+  }
+ },
+ {
+  "cle": "coeur-conditions",
+  "type": "coeur",
+  "notion": "conditions",
+  "ordre": 1,
+  "titre": "Le gardien de la fête",
+  "enonce": "Un gardien contrôle l'entrée d'une fête. Il lit l'âge (age = 15) et si la personne est accompagnée d'un adulte (accompagne = 1 si oui, 0 si non).\n\nRègles : 18 ans ou plus → « entrée libre ». Moins de 18 mais accompagné ET 12 ans ou plus → « entrée accompagnée ». Sinon → « entrée refusée ».\n\nContraintes : range le verdict dans une variable nommée message, puis affiche-le. Ton algorithme doit afficher exactement :\nentrée accompagnée",
+  "entrees": {
+   "age": 15,
+   "accompagne": 1
+  },
+  "blocs": [
+   {
+    "type": "si",
+    "condition": "age ≥ 18",
+    "alors": [
+     {
+      "type": "affectation",
+      "variable": "message",
+      "valeur": "\"entrée libre\""
+     }
+    ],
+    "sinon": [
+     {
+      "type": "si",
+      "condition": "accompagne = 1 et age ≥ 12",
+      "alors": [
+       {
+        "type": "affectation",
+        "variable": "message",
+        "valeur": "\"entrée accompagnée\""
+       }
+      ],
+      "sinon": [
+       {
+        "type": "affectation",
+        "variable": "message",
+        "valeur": "\"entrée refusée\""
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "ecrire",
+    "valeurs": [
+     "message"
+    ]
+   }
+  ],
+  "points_controle": [
+   {
+    "id": "p1",
+    "question": "Au moment de l'affichage : que vaut message ?",
+    "variable": "message",
+    "moment": {
+     "type": "fin"
+    }
+   },
+   {
+    "id": "p2",
+    "question": "À la toute fin : que vaut age ?",
+    "variable": "age",
+    "moment": {
+     "type": "fin"
+    }
+   }
+  ],
+  "indices": [
+   "age = 15 : le test « age >= 18 » passe ou casse ? Donc on part dans le sinon… et là, un DEUXIÈME test t'attend.",
+   "Structure à trois issues : (1) si age ≥ 18 → libre. (2) sinon, si accompagne = 1 ET age ≥ 12 → accompagnée. (3) sinon → refusée. Le ET se traduit par « et » entre les deux conditions.",
+   {
+    "texte": "Le premier test est donné — la grande porte. Remplis ses deux branches :",
+    "blocs": [
+     {
+      "type": "si",
+      "condition": "age ≥ 18",
+      "alors": [],
+      "sinon": []
+     }
+    ]
+   },
+   "Le déroulement guidé ci-dessous montre la solution officielle. Observe l'ordre des tests, puis reconstruis ta propre version."
+  ],
+  "sorties_langages": {
+   "python": "age = 15\naccompagne = 1\nif age >= 18:\n    message = \"entrée libre\"\nelif accompagne == 1 and age >= 12:\n    message = \"entrée accompagnée\"\nelse:\n    message = \"entrée refusée\"\nprint(message)",
+   "javascript": "let age = 15;\nlet accompagne = 1;\nlet message;\nif (age >= 18) {\n  message = \"entrée libre\";\n} else if (accompagne === 1 && age >= 12) {\n  message = \"entrée accompagnée\";\n} else {\n  message = \"entrée refusée\";\n}\nconsole.log(message);",
+   "java": "int age = 15;\nint accompagne = 1;\nString message;\nif (age >= 18) {\n  message = \"entrée libre\";\n} else if (accompagne == 1 && age >= 12) {\n  message = \"entrée accompagnée\";\n} else {\n  message = \"entrée refusée\";\n}\nSystem.out.println(message);",
+   "c": "int age = 15;\nint accompagne = 1;\nchar message[30];\nif (age >= 18) {\n  strcpy(message, \"entrée libre\");\n} else if (accompagne == 1 && age >= 12) {\n  strcpy(message, \"entrée accompagnée\");\n} else {\n  strcpy(message, \"entrée refusée\");\n}\nprintf(\"%s\\n\", message);"
+  }
+ },
+ {
+  "cle": "coeur-boucles",
+  "type": "coeur",
+  "notion": "boucles",
+  "ordre": 1,
+  "titre": "La table de multiplication",
+  "enonce": "Alex veut réviser sa table de 7. Écris un algorithme qui affiche la table de n = 7, de 1 à 5, une ligne par multiplication.\n\nContraintes : utilise un compteur nommé i dans ta boucle. Ton algorithme doit afficher exactement :\n7 × 1 = 7\n7 × 2 = 14\n7 × 3 = 21\n7 × 4 = 28\n7 × 5 = 35",
+  "entrees": {
+   "n": 7
+  },
+  "blocs": [
+   {
+    "type": "pour",
+    "variable": "i",
+    "debut": "1",
+    "fin": "5",
+    "pas": "1",
+    "corps": [
+     {
+      "type": "ecrire",
+      "valeurs": [
+       "n",
+       "\"×\"",
+       "i",
+       "\"=\"",
+       "n * i"
+      ]
+     }
+    ]
+   }
+  ],
+  "points_controle": [
+   {
+    "id": "p1",
+    "question": "Pendant le 3e tour : que vaut i ?",
+    "variable": "i",
+    "moment": {
+     "type": "iteration",
+     "numero": 3
+    }
+   },
+   {
+    "id": "p2",
+    "question": "À la toute fin (dernière valeur prise par i) : que vaut i ?",
+    "variable": "i",
+    "moment": {
+     "type": "fin"
+    }
+   }
+  ],
+  "indices": [
+   "Les 5 lignes se ressemblent TOUTES : seule la position change (1, 2, 3, 4, 5). Quand quelque chose se répète, quelle brique utilises-tu ?",
+   "Une boucle « pour i de 1 à 5 ». Dans le corps de la boucle, UN SEUL bloc écrire, avec 5 morceaux côte à côte : n, « × », i, « = », puis le calcul n * i.",
+   {
+    "texte": "Le squelette de la boucle est donné — il ne reste qu'à remplir le corps :",
+    "blocs": [
+     {
+      "type": "pour",
+      "variable": "i",
+      "debut": "1",
+      "fin": "5",
+      "pas": "1",
+      "corps": []
+     }
+    ]
+   },
+   "Le déroulement guidé ci-dessous montre la solution tour par tour. Regarde ce que vaut i à chaque tour, puis écris ta version."
+  ],
+  "sorties_langages": {
+   "python": "n = 7\nfor i in range(1, 6):\n    print(n, \"×\", i, \"=\", n * i)",
+   "javascript": "let n = 7;\nfor (let i = 1; i <= 5; i++) {\n  console.log(n + \" × \" + i + \" = \" + (n * i));\n}",
+   "java": "int n = 7;\nfor (int i = 1; i <= 5; i++) {\n  System.out.println(n + \" × \" + i + \" = \" + (n * i));\n}",
+   "c": "int n = 7;\nfor (int i = 1; i <= 5; i++) {\n  printf(\"%d × %d = %d\\n\", n, i, n * i);\n}"
+  }
+ },
+ {
+  "cle": "coeur-tableaux",
+  "type": "coeur",
+  "notion": "tableaux",
+  "ordre": 1,
+  "titre": "Le compteur de pairs",
+  "enonce": "Le tableau nombres contient [3, 8, 5, 6, 7] (cases numérotées de 0 à 4). Écris un algorithme qui COMPTE combien de valeurs sont paires.\n\nContraintes : utilise un compteur de boucle nommé i (de 0 à 4) et un compteur de pairs nommé pairs. Ton algorithme doit afficher exactement :\nPairs : 2",
+  "entrees": {
+   "nombres": [
+    3,
+    8,
+    5,
+    6,
+    7
+   ]
+  },
+  "blocs": [
+   {
+    "type": "affectation",
+    "variable": "pairs",
+    "valeur": "0"
+   },
+   {
+    "type": "pour",
+    "variable": "i",
+    "debut": "0",
+    "fin": "4",
+    "pas": "1",
+    "corps": [
+     {
+      "type": "si",
+      "condition": "nombres[i] mod 2 = 0",
+      "alors": [
+       {
+        "type": "affectation",
+        "variable": "pairs",
+        "valeur": "pairs + 1"
+       }
+      ],
+      "sinon": []
+     }
+    ]
+   },
+   {
+    "type": "ecrire",
+    "valeurs": [
+     "\"Pairs :\"",
+     "pairs"
+    ]
+   }
+  ],
+  "points_controle": [
+   {
+    "id": "p1",
+    "question": "Au moment de l'affichage : que vaut pairs ?",
+    "variable": "pairs",
+    "moment": {
+     "type": "fin"
+    }
+   },
+   {
+    "id": "p2",
+    "question": "À la toute fin (dernière valeur prise par i) : que vaut i ?",
+    "variable": "i",
+    "moment": {
+     "type": "fin"
+    }
+   }
+  ],
+  "indices": [
+   "Un nombre est pair quand le reste de sa division par 2 vaut zéro. Teste : 3 mod 2 ? 8 mod 2 ? 5 mod 2 ?",
+   "Trois briques : (1) pairs ← 0 avant la boucle, (2) une boucle i de 0 à 4 qui parcourt le tableau, (3) DANS la boucle, un « si nombres[i] mod 2 = 0 » qui fait pairs ← pairs + 1.",
+   {
+    "texte": "La première brique est donnée — l'initialisation. Enchaîne avec la boucle :",
+    "blocs": [
+     {
+      "type": "affectation",
+      "variable": "pairs",
+      "valeur": "0"
+     }
+    ]
+   },
+   "Le déroulement guidé ci-dessous montre la solution case par case. Regarde quand le compteur bondit, puis reconstruis."
+  ],
+  "sorties_langages": {
+   "python": "nombres = [3, 8, 5, 6, 7]\npairs = 0\nfor i in range(0, 5):\n    if nombres[i] % 2 == 0:\n        pairs = pairs + 1\nprint(\"Pairs :\", pairs)",
+   "javascript": "let nombres = [3, 8, 5, 6, 7];\nlet pairs = 0;\nfor (let i = 0; i <= 4; i++) {\n  if (nombres[i] % 2 === 0) {\n    pairs = pairs + 1;\n  }\n}\nconsole.log(\"Pairs : \" + pairs);",
+   "java": "int[] nombres = {3, 8, 5, 6, 7};\nint pairs = 0;\nfor (int i = 0; i <= 4; i++) {\n  if (nombres[i] % 2 == 0) {\n    pairs = pairs + 1;\n  }\n}\nSystem.out.println(\"Pairs : \" + pairs);",
+   "c": "int nombres[5] = {3, 8, 5, 6, 7};\nint pairs = 0;\nfor (int i = 0; i <= 4; i++) {\n  if (nombres[i] % 2 == 0) {\n    pairs = pairs + 1;\n  }\n}\nprintf(\"Pairs : %d\\n\", pairs);"
+  }
+ }
+]

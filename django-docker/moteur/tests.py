@@ -68,6 +68,7 @@ class InterpreteurTests(APITestCase):
 class ParcoursTests(APITestCase):
     def setUp(self):
         cache.clear()  # les compteurs de limites ne passent pas d'un test à l'autre
+        call_command("charger_actes", stdout=open("/dev/null", "w"))
         call_command("charger_demo", stdout=open("/dev/null", "w"))
         self.profil = self.client.post("/api/profil", {"pseudo": "Alex"}, format="json").json()["id"]
 
@@ -111,8 +112,8 @@ class ParcoursTests(APITestCase):
         self.assertEqual(len(r), Exercice.objects.filter(type="coeur").count())
         self.assertTrue(all("blocs" not in e for e in r))  # jamais la solution
         self.assertEqual([e["titre"] for e in r if e["principal"]],
-                         ["La moyenne de deux notes", "Le plus grand des deux", "La factorielle",
-                          "La somme d'un tableau"])
+                         ["L'échange des clés", "Le gardien de la fête", "La table de multiplication",
+                          "Le compteur de pairs"])
         # Le cockpit et le test de niveau ne changent pas.
         cockpit = self.client.get(f"/api/cockpit?profil_id={self.profil}").json()
         self.assertEqual(len(cockpit["exercices"]), 4)
@@ -178,6 +179,121 @@ class ParcoursTests(APITestCase):
         self.assertEqual(lire(), ["variables-et-types"])
         self.assertEqual(marquer("../Pas Valable", True).status_code, 400)
 
+    def test_entrainement_sans_effet_sur_la_carte(self):
+        muet = open("/dev/null", "w")
+        call_command("charger_bibliotheque", stdout=muet)
+        carte = lambda: {c["notion"]: c["etat"] for c in self.client.get(f"/api/cockpit?profil_id={self.profil}").json()["carte"]}
+        exo = Exercice.objects.get(titre="Échanger avec une variable temporaire")
+        r = self.ouvrir(exo)
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(carte()["variables"], "a_faire")  # ouvrir un entraînement ne change rien
+        tid = r.json()["tentative"]["id"]
+        reel = interpreteur.executer(exo.blocs, exo.entrees, exo.points_controle)
+        self.patch(tid, action="predire", blocs=exo.blocs,
+                   prediction={"points": {p: v["valeur"] for p, v in reel["points"].items()}, "sortie": reel["console"]})
+        self.client.post("/api/executer", {"tentative_id": tid, "blocs": exo.blocs}, format="json")
+        self.patch(tid, action="comparer", blocs=exo.blocs)
+        fin = self.patch(tid, action="soumettre", blocs=exo.blocs).json()
+        self.assertTrue(fin["resultat"]["valide"])
+        self.assertTrue(fin["resultat"]["entrainement"])
+        self.assertEqual(carte()["variables"], "a_faire")  # réussir non plus : seul le cœur principal valide
+        ok = self.client.get(f"/api/bibliotheque?profil_id={self.profil}").json()["exercices"]
+        self.assertTrue(next(e for e in ok if e["id"] == str(exo.id))["reussi"])
+
+    def test_coeurs_actes(self):
+        attendu = {
+            "L'échange des clés": ([9, 4, 4], ["a = 9", "b = 4"]),
+            "Le gardien de la fête": (["entrée accompagnée", 15], ["entrée accompagnée"]),
+            "La table de multiplication": ([3, 5], [f"7 × {i} = {7 * i}" for i in range(1, 6)]),
+            "Le compteur de pairs": ([2, 4], ["Pairs : 2"]),
+        }
+        principaux = Exercice.objects.filter(type="coeur", ordre=1)
+        self.assertEqual({e.titre for e in principaux}, set(attendu))
+        for e in principaux:
+            r = interpreteur.executer(e.blocs, e.entrees, e.points_controle)
+            self.assertEqual([p["valeur"] for p in r["points"].values()], attendu[e.titre][0], e.titre)
+            self.assertEqual(r["console"], attendu[e.titre][1], e.titre)
+
+    def test_ouverture_atomique(self):
+        """select_for_update exige une transaction : sur PostgreSQL, sans elle, ouvrir un exercice plante."""
+        from . import regles
+        self.assertTrue(hasattr(regles.ouvrir_tentative, "__wrapped__"))
+
+    def test_questions_du_test_de_niveau(self):
+        """Les 8 express actés : valeurs et sorties attendues, relevées dans leurs énoncés d'origine."""
+        attendu = {
+            "La chaîne d'affectations": ([7, 2, 14], ["x vaut 14", "y vaut 2"]),
+            "La caisse du magasin": ([36, 30, 2], ["Total : 30", "Rendu : 2"]),
+            "Pair ou impair ?": (["impair", 7], ["impair", "fin du test"]),
+            "La mention": (["passable", 12], ["Résultat : passable"]),
+            "L'escalier des sommes": ([3, 3, 10, 15], ["Somme : 15"]),
+            "Le compte à rebours": ([1, 0, 0], ["3", "2", "1", "Décollage !"]),
+            "La caisse du marché": ([11, 2, 22], ["Total : 22"]),
+            "Le sommet": ([12, 3, 12], ["Max : 12"]),
+        }
+        express = Exercice.objects.filter(type="express", actif=True)
+        self.assertEqual({e.titre for e in express}, set(attendu))
+        for e in express:
+            r = interpreteur.executer(e.blocs, e.entrees, e.points_controle)
+            self.assertEqual([p["valeur"] for p in r["points"].values()], attendu[e.titre][0], e.titre)
+            self.assertEqual(r["console"], attendu[e.titre][1], e.titre)
+            self.assertTrue(all(p["atteint"] for p in r["points"].values()), e.titre)
+
+    def test_reponses_du_catalogue(self):
+        """Les réponses écrites à la main dans le catalogue, recalculées ici."""
+        import heapq
+        from .banque.catalogue_lecture import DISTANCES_DEPUIS_C, GRAPHE_DIJKSTRA
+        dist, file = {"C": 0}, [(0, "C")]
+        while file:
+            d, s = heapq.heappop(file)
+            for v, p in GRAPHE_DIJKSTRA[s].items():
+                if d + p < dist.get(v, 10**9):
+                    dist[v] = d + p
+                    heapq.heappush(file, (d + p, v))
+        self.assertEqual(dist, DISTANCES_DEPUIS_C)
+        self.assertEqual([[2 * k + m + 1 for m in (1, 2)] for k in (1, 2)], [[4, 5], [6, 7]])
+        self.assertEqual([[k + 1 + 4 * m for m in (1, 2)] for k in (1, 4)], [[6, 10], [9, 13]])
+
+        def imp_par_variable():  # bouchiha-6-6
+            i, sortie = 1, []
+            while i < 10:
+                sortie.append(i)
+                i += 2
+                i += 3
+            return sortie
+        self.assertEqual(imp_par_variable(), [1, 6])
+
+    def test_banque(self):
+        from .models import ExerciceBanque
+        muet = open("/dev/null", "w")
+        call_command("charger_bibliotheque", stdout=muet)
+        call_command("importer_banque", stdout=muet)
+        total, jouables = ExerciceBanque.objects.count(), ExerciceBanque.objects.filter(exercice__isnull=False).count()
+        self.assertGreater(total, 200)
+        call_command("importer_banque", stdout=muet)  # réexécutable : aucun doublon
+        self.assertEqual(ExerciceBanque.objects.count(), total)
+        self.assertEqual(Exercice.objects.filter(titre="Le tri à bulles avec arrêt anticipé").count(), 1)
+        # chaque fiche jouable a sa correction exécutée par le moteur
+        self.assertFalse(ExerciceBanque.objects.filter(exercice__isnull=False, solution_verifiee=False).exists())
+
+        b = self.client.get("/api/banque").json()
+        self.assertEqual(b["nombre"], total)
+        self.assertTrue(all("solution" not in e for e in b["exercices"]))  # jamais la correction
+        self.assertEqual(sum(e["jouable"] for e in b["exercices"]), jouables)
+        avances = self.client.get("/api/banque?niveau=avance&notion=arbres").json()["exercices"]
+        self.assertTrue(avances and all(e["niveau"] == "avance" and e["notion"] == "arbres" for e in avances))
+        faciles = self.client.get("/api/banque?difficulte=1,2&jouable=1").json()["exercices"]
+        self.assertTrue(faciles and all(e["difficulte"] <= 2 and e["jouable"] for e in faciles))
+        self.assertTrue(self.client.get("/api/banque?q=hanoi").json()["nombre"] >= 1)
+
+        # le parcours n'est pas touché : 4 cœurs principaux, 8 questions au test de niveau
+        cockpit = self.client.get(f"/api/cockpit?profil_id={self.profil}").json()
+        self.assertEqual([e["titre"] for e in cockpit["exercices"]],
+                         ["L'échange des clés", "Le gardien de la fête", "La table de multiplication", "Le compteur de pairs"])
+        self.assertEqual(sum(len(n["express"]) for n in cockpit["calibrage"]["notions"]), 8)
+        biblio = self.client.get(f"/api/bibliotheque?profil_id={self.profil}").json()["exercices"]
+        self.assertTrue(all(e["niveau"] for e in biblio))
+
     # -- calibrage (F1) --
 
     def test_cascade(self):
@@ -213,16 +329,18 @@ class ParcoursTests(APITestCase):
         self.assertEqual({c["notion"]: c["etat"] for c in r.json()["carte"]}["variables"], "en_cours")
         tid = r.json()["tentative"]["id"]
 
-        faux = [{"type": "affectation", "variable": "somme", "valeur": "note1 + note2"},
-                {"type": "affectation", "variable": "moyenne", "valeur": "somme / 3"},
-                {"type": "ecrire", "valeurs": ["moyenne"]}]
+        faux = [{"type": "affectation", "variable": "temp", "valeur": "a"},
+                {"type": "affectation", "variable": "a", "valeur": "b"},
+                {"type": "affectation", "variable": "b", "valeur": "a"},
+                {"type": "ecrire", "valeurs": ['"a ="', "a"]},
+                {"type": "ecrire", "valeurs": ['"b ="', "b"]}]
         juste = exo.blocs
 
         # F4 : pas de visualisation sans prédiction.
         self.assertEqual(self.client.post("/api/executer", {"tentative_id": tid, "blocs": faux},
                                           format="json").status_code, 409)
-        self.patch(tid, action="predire", prediction={"points": {"p1": 27, "p2": 9}, "sortie": ["9"]}, blocs=faux)
-        self.assertEqual(self.patch(tid, action="predire", prediction={"points": {"p1": 0, "p2": 0}, "sortie": []},
+        self.patch(tid, action="predire", prediction={"points": {"p1": 9, "p2": 9, "p3": 4}, "sortie": ["a = 9", "b = 9"]}, blocs=faux)
+        self.assertEqual(self.patch(tid, action="predire", prediction={"points": {"p1": 0, "p2": 0, "p3": 0}, "sortie": []},
                                     blocs=faux).status_code, 409)
         # Comparer exige d'avoir visualisé ; valider exige d'avoir comparé.
         self.assertEqual(self.patch(tid, action="comparer", blocs=faux).status_code, 409)
@@ -234,12 +352,12 @@ class ParcoursTests(APITestCase):
 
         r = self.patch(tid, action="soumettre", blocs=faux).json()
         self.assertFalse(r["resultat"]["valide"])
-        self.assertNotIn("13.5", str(r))  # la sortie de référence ne fuit pas
+        self.assertNotIn("b = 4", str(r))  # la sortie de référence ne fuit pas
 
         self.client.post("/api/executer", {"tentative_id": tid, "blocs": juste}, format="json")
         r = self.patch(tid, action="soumettre", blocs=juste).json()
         self.assertTrue(r["resultat"]["valide"])
-        self.assertIn("print(moyenne)", r["resultat"]["recompense"]["python"])
+        self.assertIn("temp = a", r["resultat"]["recompense"]["python"])
         self.assertEqual(r["resultat"]["nouvelles_notions"], ["conditions"])
         self.assertEqual(r["tentative"]["etape_atteinte"], "reussie")
         self.assertEqual({c["notion"]: c["etat"] for c in r["carte"]}["variables"], "validee")
@@ -252,7 +370,7 @@ class ParcoursTests(APITestCase):
         CarteMaitrise.objects.filter(profil_id=self.profil, notion="variables").update(etat="demontree")
         exo = self.exo("variables", "coeur")
         tid = self.ouvrir(exo).json()["tentative"]["id"]
-        self.patch(tid, action="predire", prediction={"points": {"p1": 27, "p2": 13.5}, "sortie": "13.5"},
+        self.patch(tid, action="predire", prediction={"points": {"p1": 9, "p2": 4, "p3": 4}, "sortie": ["a = 9", "b = 4"]},
                    blocs=exo.blocs)
         self.client.post("/api/executer", {"tentative_id": tid, "blocs": exo.blocs}, format="json")
         self.patch(tid, action="comparer", blocs=exo.blocs)
@@ -261,7 +379,7 @@ class ParcoursTests(APITestCase):
 
     def test_indices(self):
         tid = self.ouvrir(self.exo("variables", "coeur")).json()["tentative"]["id"]
-        r = self.patch(tid, action="indice", marche=3).json()["resultat"]
+        r = self.patch(tid, action="indice", marche=4).json()["resultat"]
         self.assertTrue(r["derniere"])
         self.assertEqual(r["suivante"], "deroulement_guide")
         self.assertEqual(self.patch(tid, action="indice", marche=9).status_code, 400)
@@ -269,13 +387,14 @@ class ParcoursTests(APITestCase):
 
 class BackOfficeTests(APITestCase):
     def setUp(self):
+        call_command("charger_actes", stdout=open("/dev/null", "w"))
         call_command("charger_demo", stdout=open("/dev/null", "w"))
         User.objects.create_superuser("admin", "", "motdepasse")
 
     def test_reserve_aux_admins(self):
         self.assertIn(self.client.get("/api/exercices").status_code, (401, 403))
         self.client.login(username="admin", password="motdepasse")
-        self.assertEqual(len(self.client.get("/api/exercices").json()), 12)
+        self.assertEqual(len(self.client.get("/api/exercices").json()), 16)
 
     def test_validation_de_forme(self):
         self.client.login(username="admin", password="motdepasse")
@@ -293,7 +412,7 @@ class BackOfficeTests(APITestCase):
     def test_suppression_restrict(self):
         self.client.login(username="admin", password="motdepasse")
         profil = self.client.post("/api/profil", {"pseudo": "Alex"}, format="json").json()["id"]
-        exo = Exercice.objects.get(notion="variables", type="coeur")
+        exo = Exercice.objects.get(notion="variables", type="coeur", ordre=1)
         self.client.post("/api/tentative", {"profil_id": profil, "exercice_id": str(exo.id)}, format="json")
         self.assertEqual(self.client.delete(f"/api/exercices/{exo.id}").status_code, 409)
         self.assertEqual(self.client.patch(f"/api/exercices/{exo.id}", {"actif": False}, format="json").status_code, 200)

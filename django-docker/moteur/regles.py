@@ -7,6 +7,7 @@ non négociable est enfreinte. Le client ne calcule jamais un état.
 
 import hmac
 import re
+import unicodedata
 
 from django.db import transaction
 from django.utils import timezone
@@ -294,7 +295,7 @@ def bibliotheque(profil):
             "exercice_id", flat=True
         )
     )
-    coeurs = Exercice.objects.filter(type="coeur", actif=True).order_by("ordre", "date_creation")
+    coeurs = Exercice.objects.filter(type="coeur", actif=True).select_related("fiche").order_by("ordre", "date_creation")
     exercices, principaux = [], set()
     for e in coeurs:
         principal = e.notion not in principaux
@@ -306,6 +307,9 @@ def bibliotheque(profil):
             "enonce": e.enonce,
             "ordre": e.ordre,
             "principal": principal,
+            # Classement de la banque, quand l'exercice a sa fiche.
+            "niveau": getattr(getattr(e, "fiche", None), "niveau", None),
+            "difficulte": getattr(getattr(e, "fiche", None), "difficulte", None),
             "accessible": e.notion in ouvertes,
             "tentative_en_cours": en_cours.get(e.id),
             "reussi": e.id in reussis,
@@ -360,6 +364,18 @@ def progression(tentative, resultat=None):
     return reponse
 
 
+def est_coeur_principal(exercice):
+    """Le cœur de la notion (CDC-1) : le premier actif, celui que montre le cockpit.
+    Les autres cœurs sont de l'entraînement : mêmes règles de cycle, sans effet sur la carte."""
+    premier = (
+        Exercice.objects.filter(type="coeur", actif=True, notion=exercice.notion)
+        .order_by("ordre", "date_creation")
+        .values_list("id", flat=True)
+        .first()
+    )
+    return premier == exercice.id
+
+
 @transaction.atomic
 def ouvrir_tentative(profil, exercice):
     if not exercice.actif:
@@ -383,7 +399,7 @@ def ouvrir_tentative(profil, exercice):
                 403,
                 "notion_verrouillee",
             )
-        if etats[exercice.notion] == "a_faire":
+        if etats[exercice.notion] == "a_faire" and est_coeur_principal(exercice):
             _changer_etat(profil, exercice.notion, "en_cours")
 
     if existante:
@@ -538,6 +554,13 @@ def soumettre(tentative, blocs=None):
     tentative.terminee = True
     _avancer(tentative, "reussie")
     tentative.save()
+    if not est_coeur_principal(exercice):
+        return {
+            "valide": True,
+            "entrainement": True,
+            "recompense": {"notion": exercice.notion, "python": exercice.sorties_langages.get("python")},
+            "nouvelles_notions": [],
+        }
     etats_avant = etats_carte(profil)
     if etats_avant[exercice.notion] not in ETATS_VERTS:  # ne jamais régresser un état déjà acquis
         _changer_etat(profil, exercice.notion, "validee")
@@ -627,3 +650,82 @@ def marquer_chapitre(profil, chapitre, termine):
     else:
         profil.chapitres_lus.filter(chapitre=chapitre).delete()
     return chapitres_lus(profil)
+
+
+# --------------------------------------------------------------------------
+# Banque d'exercices : validation des fiches (comme le back-office pour les exercices)
+# --------------------------------------------------------------------------
+
+NATURES_SOURCE = {"reprise", "reformulation", "variante"}
+
+
+def valider_fiche(f):
+    """Lève ValueError si une fiche de la banque est incomplète ou mal formée."""
+    from .models import NIVEAUX, NOTIONS_BANQUE
+
+    def erreur(message):
+        raise ValueError(f"{f.get('cle', '?')} : {message}")
+
+    if not re.fullmatch(r"[a-z0-9-]{1,60}", f.get("cle") or ""):
+        erreur("clé invalide (minuscules, chiffres et tirets)")
+    for champ, maxi in (("titre", 120), ("description", 240)):
+        if not isinstance(f.get(champ), str) or not f[champ].strip() or len(f[champ]) > maxi:
+            erreur(f"{champ} obligatoire, {maxi} caractères au plus")
+    if not isinstance(f.get("enonce"), str) or len(f["enonce"].strip()) < 20:
+        erreur("énoncé manquant ou trop court")
+    if f.get("niveau") not in NIVEAUX:
+        erreur(f"niveau parmi {NIVEAUX}")
+    if not isinstance(f.get("difficulte"), int) or not 1 <= f["difficulte"] <= 5:
+        erreur("difficulté entière de 1 à 5")
+    if f.get("notion") not in NOTIONS_BANQUE:
+        erreur(f"notion inconnue : {f.get('notion')}")
+    if any(n not in NOTIONS_BANQUE for n in f.get("notions_secondaires", [])):
+        erreur("notion secondaire inconnue")
+    if not f.get("objectifs") or not all(isinstance(o, str) and o.strip() for o in f["objectifs"]):
+        erreur("au moins un objectif pédagogique")
+    src = f.get("source") or {}
+    if not src.get("document") or src.get("nature") not in NATURES_SOURCE:
+        erreur("source : document et nature (reprise, reformulation, variante) obligatoires")
+    for champ in ("prerequis", "indices", "exemples", "tags"):
+        if not isinstance(f.get(champ, []), list):
+            erreur(f"{champ} doit être une liste")
+
+
+def _sans_accents(texte):
+    return unicodedata.normalize("NFD", texte).encode("ascii", "ignore").decode().lower()
+
+
+def banque(filtres):
+    """Les fiches actives de la banque, filtrées ; jamais la correction (elle reste au back-office)."""
+    from .models import ExerciceBanque
+
+    qs = ExerciceBanque.objects.filter(actif=True)
+    for champ in ("niveau", "notion"):
+        if valeur := filtres.get(champ):
+            qs = qs.filter(**{f"{champ}__in": valeur.split(",")})
+    if valeur := filtres.get("difficulte"):
+        qs = qs.filter(difficulte__in=[int(v) for v in valeur.split(",") if v.isdigit()])
+    if (valeur := filtres.get("jouable")) in ("0", "1"):
+        qs = qs.filter(exercice__isnull=valeur == "0")
+    fiches = list(qs)
+    if tag := filtres.get("tag"):
+        fiches = [f for f in fiches if tag in f.tags or tag in f.notions_secondaires]
+    if q := _sans_accents((filtres.get("q") or "").strip()):
+        fiches = [f for f in fiches if q in _sans_accents(f"{f.titre} {f.enonce} {' '.join(f.tags)}")]
+    ordre_niveau = {"debutant": 0, "intermediaire": 1, "avance": 2}
+    fiches.sort(key=lambda f: (ordre_niveau[f.niveau], f.difficulte, f.notion, f.titre))
+    return {
+        "nombre": len(fiches),
+        "exercices": [
+            {
+                "cle": f.cle, "titre": f.titre, "description": f.description, "enonce": f.enonce,
+                "consignes": f.consignes, "niveau": f.niveau, "difficulte": f.difficulte, "notion": f.notion,
+                "notions_secondaires": f.notions_secondaires, "objectifs": f.objectifs, "prerequis": f.prerequis,
+                "exemples": f.exemples, "indices": f.indices, "complexite": f.complexite, "tags": f.tags,
+                "source": {k: f.source.get(k) for k in ("document", "auteur", "chapitre", "numero", "nature")},
+                "remarques": f.remarques, "jouable": f.exercice_id is not None, "exercice_id": f.exercice_id,
+                "correction_disponible": bool(f.solution), "correction_verifiee": f.solution_verifiee,
+            }
+            for f in fiches
+        ],
+    }

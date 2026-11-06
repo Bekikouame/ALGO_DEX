@@ -143,7 +143,7 @@ export function QuestionTest({
             {LIBELLES_NOTION[exercice.notion]} · question {rang} sur {total}
           </p>
           <h1 className="mt-2 font-display text-4xl leading-tight sm:text-5xl">{exercice.titre}</h1>
-          <p className="mt-2 max-w-xl text-muted">{exercice.enonce}</p>
+          <p className="mt-2 max-w-xl whitespace-pre-line text-muted">{exercice.enonce}</p>
         </div>
         <FilDesPhases courante={ORDRE.indexOf(phase)} />
       </div>
