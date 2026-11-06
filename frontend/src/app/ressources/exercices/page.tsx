@@ -120,7 +120,7 @@ export default function BibliothequeExercices() {
             value={requete}
             onChange={(e) => setRequete(e.target.value)}
             placeholder="Chercher un exercice…"
-            className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted/80"
+            className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted"
           />
         </label>
         <div className="flex flex-wrap gap-2" role="group" aria-label="État">

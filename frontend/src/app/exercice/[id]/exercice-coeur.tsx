@@ -69,6 +69,7 @@ function Exercice({ id, profilId }: { id: string; profilId: string }) {
           key={depart.tentative.id}
           depart={depart}
           pseudo={cockpit?.profil.pseudo}
+          profilId={profilId}
           aide={<GuideNotion notion={notion} />}
           onSoumis={surSoumission}
         />

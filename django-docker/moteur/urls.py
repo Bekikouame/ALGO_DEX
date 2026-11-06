@@ -9,6 +9,7 @@ router.register("exercices", views.ExerciceViewSet)
 urlpatterns = [
     path("profil", views.ProfilView.as_view()),
     path("profil/reprendre", views.RepriseView.as_view()),
+    path("profil/code", views.CodeProfilView.as_view()),
     path("cours", views.CoursView.as_view()),
     path("cockpit", views.CockpitView.as_view()),
     path("bibliotheque", views.BibliothequeView.as_view()),

@@ -24,6 +24,10 @@ class RepriseSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=20, help_text="Le code de reprise, avec ou sans tiret (ex. K7QF-M2XP).")
 
 
+class CodeProfilSerializer(serializers.Serializer):
+    profil_id = serializers.UUIDField()
+
+
 class ChapitreLuSerializer(serializers.Serializer):
     profil_id = serializers.UUIDField()
     chapitre = serializers.RegexField(r"^[a-z0-9-]{1,60}$", help_text="Identifiant du chapitre (ex. variables-et-types).")

@@ -10,14 +10,14 @@
   --surface-2: #f1ebe0;
   --border: #e6ddcd;
   --text: #13203b;
-  --muted: #667085;
+  --muted: #5b6478;
   --primary: #2156e0;
   --primary-strong: #1846c4;
   --primary-soft: #e4ecff;
   --on-primary: #ffffff;
   --success: #16884a;
   --success-soft: #e2f4e8;
-  --warning: #b7791f;
+  --warning: #8a5a12;
   --warning-soft: #fdf1dc;
   --danger: #c2412d;
   --danger-soft: #fde6e1;
@@ -29,7 +29,7 @@
   --code-text: #d7def0;
   --hero-from: #1d3fb8;
   --hero-to: #5a3fd6;
-  --menthe: #0b8a69;
+  --menthe: #08705a;
   --rose: #c1307f;
   --lavande: #5a46d8;
   --shadow: 0 1px 2px rgb(19 32 59 / 0.05), 0 8px 24px -12px rgb(19 32 59 / 0.18);
@@ -348,4 +348,9 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* Thème sombre : le violet des fonds reste, mais un texte violet doit rester lisible sur fond sombre. */
+[data-theme="dark"] .text-primary {
+  color: #a99fff;
 }

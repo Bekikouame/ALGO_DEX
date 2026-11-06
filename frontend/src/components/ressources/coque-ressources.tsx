@@ -109,7 +109,7 @@ function RechercheCours() {
             }
           }}
           placeholder="Rechercher un cours, une notion..."
-          className="min-w-0 flex-1 bg-transparent text-text outline-none placeholder:text-muted/80 [&::-webkit-search-cancel-button]:hidden"
+          className="min-w-0 flex-1 bg-transparent text-text outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:hidden"
         />
         <kbd className="hidden shrink-0 rounded-md border border-border bg-surface-2 px-1.5 py-0.5 font-sans text-[11px] font-semibold text-muted md:inline">⌘K</kbd>
       </label>

@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { colorer } from "@/components/code/colorer";
 import { Coupe } from "@/components/test/icones";
 import { Constellation } from "@/components/test/scenes";
-import { LIBELLES_NOTION, NOTIONS, type Cockpit, type Etat, type LigneCarte, type Notion, type PlanCascade } from "@/lib/api";
+import { api, LIBELLES_NOTION, NOTIONS, type Cockpit, type Etat, type LigneCarte, type Notion, type PlanCascade } from "@/lib/api";
 import { GUIDES, type Guide } from "@/lib/guides";
 import { RobotAlgo, SceneNotion } from "./illustrations";
 
@@ -604,20 +604,35 @@ export function Motivation() {
   );
 }
 
-/** Le code qui permet de retrouver ce profil sur un autre appareil, avec le pseudo. */
-export function CodeReprise({ code }: { code: string }) {
+/** Le code qui permet de retrouver ce profil, avec le pseudo : masqué tant qu'on ne demande pas à le voir. */
+export function CodeReprise({ profilId }: { profilId: string }) {
   const [copie, setCopie] = useState(false);
+  const [code, setCode] = useState<string | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const afficher = () => {
+    setErreur(null);
+    api.codeReprise(profilId).then((r) => setCode(r.code_reprise), (e) => setErreur(e.message));
+  };
   return (
     <section aria-labelledby="titre-code" className="rounded-[1.75rem] border border-border bg-surface p-carte">
       <h2 id="titre-code" className="flex items-center gap-icone text-xs font-bold uppercase tracking-[0.14em] text-primary">
         <KeyRound size={16} aria-hidden /> Mon code de reprise
       </h2>
       <div className="mt-titre flex items-center justify-between gap-3">
-        <span className="font-mono text-2xl font-semibold tracking-[0.12em]">{code}</span>
+        <span className="font-mono text-2xl font-semibold tracking-[0.12em]">{code ?? "••••-••••"}</span>
+        {code === null ? (
+          <button
+            type="button"
+            onClick={afficher}
+            className="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-text transition-colors hover:border-primary/50"
+          >
+            Afficher
+          </button>
+        ) : (
         <button
           type="button"
           onClick={() => {
-            navigator.clipboard?.writeText(code).then(
+            navigator.clipboard?.writeText(code ?? "").then(
               () => {
                 setCopie(true);
                 window.setTimeout(() => setCopie(false), 2000);
@@ -629,9 +644,11 @@ export function CodeReprise({ code }: { code: string }) {
         >
           {copie ? <Check size={15} /> : <Copy size={15} />} {copie ? "Copié" : "Copier"}
         </button>
+        )}
       </div>
+      {erreur && <p role="alert" className="mt-2 text-sm text-danger">{erreur}</p>}
       <p className="mt-2 text-sm leading-relaxed text-text/65">
-        Note-le : avec ton pseudo, il te permet de retrouver ton profil sur un autre appareil. Garde-le pour toi.
+        Note-le : sans lui, tu ne pourras plus rouvrir ton profil après l&apos;avoir quitté. Garde-le pour toi.
       </p>
     </section>
   );

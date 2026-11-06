@@ -6,7 +6,24 @@ const BACKEND_URL = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
 
 // En-têtes de sécurité sur toutes les pages : pas d'affichage dans une iframe d'un autre site,
 // pas de devinette de type de fichier, pas de fuite de l'adresse complète vers les autres sites.
+// Next insère des scripts et styles dans la page : « unsafe-inline » reste nécessaire ; tout le reste vient du site.
+const DEVELOPPEMENT = process.env.NODE_ENV === "development";
+const CSP = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${DEVELOPPEMENT ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "media-src 'self'",
+  `connect-src 'self'${DEVELOPPEMENT ? " ws:" : ""}`,
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+
 const ENTETES_SECURITE = [
+  { key: "Content-Security-Policy", value: CSP },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

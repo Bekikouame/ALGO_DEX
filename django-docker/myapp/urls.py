@@ -10,6 +10,8 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
+handler500 = "moteur.views.erreur_500"
+
 urlpatterns = [
     path(settings.CHEMIN_ADMIN, admin.site.urls),
     # Sans barre finale : le site Next la retire avant de relayer /api/*, Django ne doit pas la rajouter.

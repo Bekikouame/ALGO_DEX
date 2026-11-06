@@ -6,7 +6,16 @@ import { useEffect, useState, type FormEvent } from "react";
 import { MessageErreur } from "@/components/coque";
 import { Avatar } from "@/components/marque";
 import { api, type Profil } from "@/lib/api";
-import { idsAppareil, memoriserProfil, oublierProfil } from "@/lib/profils";
+import {
+  expirerSiInactif,
+  idsAppareil,
+  memoriserProfil,
+  memoriserPseudo,
+  oublierProfil,
+  oublierPseudo,
+  profilActif,
+  pseudosAppareil,
+} from "@/lib/profils";
 import { nettoyerPseudo, verifierPseudo } from "@/lib/pseudo";
 
 export type VueDemarrage = "nouveau" | "reprendre";
@@ -26,6 +35,8 @@ export function Demarrage({
   const [pseudo, setPseudo] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
+  const [pseudos, setPseudos] = useState<string[]>([]);
+  const [partage, setPartage] = useState(false);
   // Le format est vérifié pendant la saisie ; le serveur refait la même vérification.
   const propre = nettoyerPseudo(pseudo);
   const probleme = propre ? verifierPseudo(propre) : null;
@@ -33,11 +44,23 @@ export function Demarrage({
   const avertissement = probleme && !(propre.length < 2 && probleme.includes("entre 2 et 40")) ? probleme : null;
 
   useEffect(() => {
+    expirerSiInactif();
+    // Seul le profil ouvert reste accessible sans code ; les autres ne gardent que leur pseudo sur l'appareil.
+    const actif = profilActif();
     const ids = idsAppareil();
     (ids.length ? api.profils(ids) : Promise.resolve([]))
-      .then(setProfils)
+      .then((liste) => {
+        for (const p of liste) {
+          if (p.id === actif) continue;
+          memoriserPseudo(p.pseudo);
+          oublierProfil(p.id);
+        }
+        setProfils(liste.filter((p) => p.id === actif));
+        setPseudos(pseudosAppareil().filter((x) => !liste.some((p) => p.id === actif && p.pseudo === x)));
+      })
       .catch((e) => {
         setProfils([]);
+        setPseudos(pseudosAppareil());
         setErreur(e.message);
       });
   }, []);
@@ -53,7 +76,7 @@ export function Demarrage({
     setEnvoi(true);
     try {
       const profil = await api.creerProfil(propre);
-      memoriserProfil(profil.id);
+      memoriserProfil(profil.id, partage);
       // La page d'accueil reste en mémoire (Cache Components) : on la laisse propre pour le prochain retour.
       setPseudo("");
       setEnvoi(false);
@@ -82,15 +105,18 @@ export function Demarrage({
     try {
       const profil = await api.reprendreProfil(nettoyerPseudo(repPseudo), repCode);
       setRepEnvoi(false);
-      choisir(profil);
+      oublierPseudo(profil.pseudo);
+      memoriserProfil(profil.id, partage);
+      onFermer();
+      router.push("/parcours");
     } catch (err) {
       setRepErreur((err as Error).message);
       setRepEnvoi(false);
     }
   }
 
-  function choisir(p: Profil) {
-    memoriserProfil(p.id);
+  // Le profil déjà ouvert sur cet appareil : on y retourne simplement.
+  function choisir() {
     onFermer();
     router.push("/parcours");
   }
@@ -152,6 +178,7 @@ export function Demarrage({
           >
             {envoi ? "Création du profil…" : "Commencer"} <ArrowRight size={18} />
           </button>
+          <CasePartage coche={partage} onChange={setPartage} />
           <p className="mt-5 text-center text-sm text-muted">
             Déjà un profil&nbsp;?{" "}
             <button type="button" onClick={() => onVue("reprendre")} className="font-semibold text-text underline underline-offset-4 hover:text-primary">
@@ -164,20 +191,16 @@ export function Demarrage({
           <h2 id="titre-reprendre" tabIndex={-1} className="pr-8 font-display text-3xl leading-tight outline-none">
             Reprendre mon profil
           </h2>
-          <p className="mt-2 text-sm text-muted">Les profils créés sur cet appareil.</p>
+          <p className="mt-2 text-sm text-muted">Ton pseudo et ton code de reprise suffisent, sur n&apos;importe quel appareil.</p>
           {profils === null ? (
             <p className="mt-6 text-sm text-muted">Chargement…</p>
-          ) : profils.length === 0 ? (
-            <p className="mt-6 rounded-xl border border-dashed border-border p-4 text-sm text-muted">
-              Aucun profil n&apos;est enregistré sur cet appareil.
-            </p>
-          ) : (
+          ) : profils.length === 0 ? null : (
             <ul className="mt-6 flex flex-col gap-2">
               {profils.map((p) => (
                 <li key={p.id} className="group flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => choisir(p)}
+                    onClick={choisir}
                     className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-border bg-bg/70 p-3 text-left transition-colors hover:border-primary"
                   >
                     <Avatar pseudo={p.pseudo} />
@@ -193,11 +216,13 @@ export function Demarrage({
                     type="button"
                     onClick={() => {
                       oublierProfil(p.id);
+                      memoriserPseudo(p.pseudo);
+                      setPseudos(pseudosAppareil());
                       setProfils((l) => l?.filter((x) => x.id !== p.id) ?? null);
                     }}
                     className="rounded-lg p-2 text-muted hover:text-danger"
-                    title="Retirer de cet appareil (le profil reste en base)"
-                    aria-label={`Retirer ${p.pseudo} de cet appareil`}
+                    title="Fermer ce profil sur cet appareil (il faudra le code pour le rouvrir)"
+                    aria-label={`Fermer ${p.pseudo} sur cet appareil`}
                   >
                     <X size={16} />
                   </button>
@@ -212,9 +237,38 @@ export function Demarrage({
           )}
           <form onSubmit={reprendreParCode} noValidate className="mt-6 border-t border-border pt-5">
             <p className="flex items-center gap-2 text-sm font-semibold">
-              <KeyRound size={16} className="text-primary" aria-hidden /> Sur un autre appareil&nbsp;?
+              <KeyRound size={16} className="text-primary" aria-hidden /> Retrouver mon profil
             </p>
-            <p className="mt-1 text-xs text-muted">Ton pseudo et ton code de reprise, affiché dans Mon espace.</p>
+            <p className="mt-1 text-xs text-muted">Ton code de reprise est affiché dans Mon espace.</p>
+            {pseudos.length > 0 && (
+              <ul className="mt-3 flex flex-wrap gap-2" aria-label="Pseudos déjà utilisés sur cet appareil">
+                {pseudos.map((x) => (
+                  <li key={x} className="flex items-center rounded-full border border-border bg-bg/70 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRepPseudo(x);
+                        document.getElementById("reprise-code")?.focus();
+                      }}
+                      className="rounded-l-full py-1.5 pl-3 pr-1 font-semibold hover:text-primary"
+                    >
+                      {x}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        oublierPseudo(x);
+                        setPseudos(pseudosAppareil());
+                      }}
+                      aria-label={`Effacer ${x} de cette liste`}
+                      className="rounded-r-full p-1.5 pr-2 text-muted hover:text-danger"
+                    >
+                      <X size={13} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
             <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_9rem]">
               <label className="sr-only" htmlFor="reprise-pseudo">
                 Pseudo
@@ -248,6 +302,7 @@ export function Demarrage({
                 className="min-w-0 rounded-xl border border-border bg-bg/70 px-3.5 py-2.5 font-mono text-sm tracking-wider outline-none focus:border-primary"
               />
             </div>
+            <CasePartage coche={partage} onChange={setPartage} />
             {repErreur && (
               <div className="mt-3">
                 <MessageErreur message={repErreur} />
@@ -270,5 +325,14 @@ export function Demarrage({
         </div>
       )}
     </div>
+  );
+}
+
+function CasePartage({ coche, onChange }: { coche: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="mt-3 flex items-start gap-2 text-xs text-muted">
+      <input type="checkbox" checked={coche} onChange={(e) => onChange(e.target.checked)} className="mt-0.5" />
+      Ordinateur partagé : fermer mon profil après 30 minutes sans activité
+    </label>
   );
 }

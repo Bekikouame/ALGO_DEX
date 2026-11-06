@@ -3,7 +3,9 @@
 import { ArrowRight, Check, Pause, Play, RotateCcw, StepForward, TriangleAlert, X } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { MessageErreur } from "@/components/coque";
+import { AideConsole } from "@/components/cycle/prediction";
 import { Mascotte } from "@/components/marque";
+import { ecrireSaisie, lireSaisie } from "@/lib/profils";
 import {
   api,
   LIBELLES_NOTION,
@@ -159,7 +161,7 @@ export function QuestionTest({
 
         {phase === "predire" && (
           <ScenePrincipale exercice={exercice} lignes={lignes}>
-            <SaisiePrediction points={exercice.points_controle} lignes={lignes} enCours={occupe} onEngager={engager} />
+            <SaisiePrediction cle={exercice.id} points={exercice.points_controle} lignes={lignes} enCours={occupe} onEngager={engager} />
           </ScenePrincipale>
         )}
 
@@ -245,20 +247,27 @@ function Attente({ children }: { children: React.ReactNode }) {
  * Les réponses partent telles quelles au moteur, qui sait lire « 13.5 », « vrai » ou « [4, 10, 15] ».
  */
 function SaisiePrediction({
+  cle,
   points,
   lignes,
   enCours,
   onEngager,
 }: {
+  cle: string;
   points: PointControle[];
   lignes: LignePseudo[];
   enCours: boolean;
   onEngager: (p: Prediction) => void;
 }) {
   const tableaux = tableauxEcrits(lignes);
-  const [valeurs, setValeurs] = useState<Record<string, string>>({});
-  const [cases, setCases] = useState<Record<string, string[]>>({});
-  const [sortie, setSortie] = useState("");
+  // La saisie survit à une actualisation de la page, jusqu'à ce que la prédiction soit engagée.
+  const [depart] = useState(() => lireSaisie<{ valeurs: Record<string, string>; cases: Record<string, string[]>; sortie: string }>(cle));
+  const [valeurs, setValeurs] = useState<Record<string, string>>(depart?.valeurs ?? {});
+  const [cases, setCases] = useState<Record<string, string[]>>(depart?.cases ?? {});
+  const [sortie, setSortie] = useState(depart?.sortie ?? "");
+  useEffect(() => {
+    ecrireSaisie(cle, { valeurs, cases, sortie });
+  }, [cle, valeurs, cases, sortie]);
   const enTableau = (p: PointControle) => (tableaux[p.variable] ?? 0) > 0;
   const valeurDe = (p: PointControle) =>
     enTableau(p) ? `[${(cases[p.id] ?? []).map((c) => c.trim()).join(", ")}]` : (valeurs[p.id] ?? "").trim();
@@ -271,6 +280,7 @@ function SaisiePrediction({
   function envoyer(e: FormEvent) {
     e.preventDefault();
     if (!complet) return;
+    ecrireSaisie(cle, null);
     onEngager({ points: Object.fromEntries(points.map((p) => [p.id, valeurDe(p)])), sortie: sortie.split("\n") });
   }
 
@@ -332,11 +342,12 @@ function SaisiePrediction({
 
       <label className="block">
         <span className="mb-2 block -rotate-1 font-hand text-xl text-lavande">et la console affichera…</span>
+        <AideConsole />
         <textarea
           value={sortie}
           onChange={(e) => setSortie(e.target.value)}
-          rows={2}
-          placeholder="une ligne par écrire"
+          rows={3}
+          placeholder={"1re ligne affichée\n2e ligne affichée"}
           className="w-full rounded-2xl border-2 border-[#4b43b8]/60 bg-[#0b0d29] px-4 py-3 font-mono text-[#e4e6ff] outline-none placeholder:text-white/30 focus:border-[#8b7bff]"
         />
       </label>
@@ -509,6 +520,11 @@ function Revelation({ comparaison }: { comparaison: Comparaison }) {
             </div>
           </li>
         ))}
+        {comparaison.sortie_valeurs_seules && (
+          <li className="revele rounded-2xl border border-menthe/50 bg-menthe/5 px-4 py-3 text-sm">
+            Tes valeurs sont justes. Regarde la colonne « réel » : la console affiche aussi le texte prévu par l&apos;algorithme.
+          </li>
+        )}
         {comparaison.console.map((c, n) => (
           <li
             key={`c${c.numero}`}
@@ -565,7 +581,7 @@ function expliquer(texte: string): string {
   if ((m = t.match(/^pour (\w+) de (.+) à (.+) faire$/))) return `Une boucle : le corps se répète pour ${m[1]} allant de ${m[2]} à ${m[3]}.`;
   if (t.startsWith("tant que ")) return "Une boucle : le corps se répète tant que la condition reste vraie.";
   if (t.startsWith("fin")) return "Fin du bloc : on revient au niveau du dessus.";
-  if (t.startsWith("écrire")) return "écrire envoie une ligne dans la console.";
+  if (t.startsWith("écrire")) return "écrire affiche une ligne dans la console : le texte entre guillemets tel quel, et la valeur des variables.";
   return "Lis cette ligne attentivement.";
 }
 

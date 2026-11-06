@@ -1,10 +1,13 @@
 "use client";
 
-import { ArrowRight, LogOut, RotateCcw } from "lucide-react";
+import { ArrowRight, CirclePlay, LogOut, RotateCcw } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { CarteMaitrise, LegendeCarte } from "@/components/carte";
 import { Chargement, MessageErreur } from "@/components/coque";
+import { ETAPES_ESPACE, ETAPES_TEST } from "@/components/guides/contenus";
+import { GuideVideo } from "@/components/guides/guide-video";
 import { Logo, Mascotte } from "@/components/marque";
 import { Attente, CocheTracee, Coupe, Drapeau, IconeComparer, IconeLire, IconeObserver } from "@/components/test/icones";
 import { QuestionTest } from "@/components/test/question";
@@ -152,7 +155,10 @@ function rangDans(plan: PlanCascade, exercice: ExercicePublic) {
 }
 
 /** L'entrée dans le test : les règles, et la cascade qui attend. */
+const VisiteGuidee = dynamic(() => import("@/components/guides/visite-guidee").then((m) => m.VisiteGuidee), { ssr: false });
+
 function Entree({ plan, onCommencer }: { plan: PlanCascade; onCommencer: () => void }) {
+  const [guide, setGuide] = useState(false);
   const regles = [
     { icone: IconeLire, texte: "Tu dévoiles un court algorithme, ligne par ligne." },
     { icone: IconeObserver, texte: "Tu prédis ce qu'il va faire, puis tu le regardes s'exécuter." },
@@ -189,6 +195,10 @@ function Entree({ plan, onCommencer }: { plan: PlanCascade; onCommencer: () => v
         >
           Commencer le test <ArrowRight size={18} />
         </button>
+        <button type="button" onClick={() => setGuide(true)} className="ml-4 mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary underline underline-offset-2 hover:no-underline">
+          <CirclePlay size={17} aria-hidden /> Voir la vidéo du test
+        </button>
+        {guide && <VisiteGuidee cle="test" titre="Le test de positionnement" etapes={ETAPES_TEST} videoDabord onFermer={() => setGuide(false)} />}
       </div>
 
       <div className="relative flex flex-col items-center gap-8">
@@ -281,6 +291,19 @@ function Bilan({ etat }: { etat: Extract<Etat, { phase: "bilan" }> }) {
           Voir mon parcours
         </Link>
       </div>
+
+      <section className="mt-10 grid items-center gap-6 rounded-3xl border border-primary/30 bg-surface p-5 sm:p-7 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" aria-labelledby="titre-suite-ide">
+        <div>
+          <p className="-rotate-1 font-hand text-xl text-lavande">et maintenant…</p>
+          <h2 id="titre-suite-ide" className="mt-1 font-display text-3xl leading-tight">
+            Apprends à utiliser l&apos;espace de travail
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            Regarde comment écrire un algorithme, l&apos;exécuter et le suivre pas à pas. Une visite guidée t&apos;accompagnera aussi à ton premier exercice.
+          </p>
+        </div>
+        <GuideVideo cle="espace" etapes={ETAPES_ESPACE} />
+      </section>
 
       <section className="mt-14">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">

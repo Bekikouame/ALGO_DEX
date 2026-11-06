@@ -34,6 +34,13 @@ MAX_PAS = 5000
 MAX_LIGNES_CONSOLE = 200
 MAX_NOMBRE = 10**15
 MAX_TEXTE = 1000
+# Bornes contre les programmes démesurés : une exécution reste petite en mémoire et en réponse.
+MAX_TAILLE_TABLEAU = 1000
+MAX_LONGUEUR_EXPRESSION = 2000
+MAX_PROFONDEUR_EXPRESSION = 50
+MAX_BLOCS = 500
+MAX_IMBRICATION = 20
+MAX_VOLUME_TRACE = 200_000  # valeurs copiées dans la trace, tous pas confondus
 TYPES_BLOCS = ("affectation", "si", "tant_que", "pour", "ecrire")
 TYPES_MOMENT = ("fin", "iteration", "affectation")
 NOM_VARIABLE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -95,6 +102,17 @@ _NOEUDS_AUTORISES = (
 )
 
 
+def _profondeur(arbre):
+    """Profondeur de l'arbre, sans récursion : l'évaluateur, lui, est récursif."""
+    maximum = 0
+    pile = [(arbre, 1)]
+    while pile:
+        noeud, niveau = pile.pop()
+        maximum = max(maximum, niveau)
+        pile.extend((enfant, niveau + 1) for enfant in ast.iter_child_nodes(noeud))
+    return maximum
+
+
 class Expression:
     def __init__(self, brute, chemin):
         self.brute = brute
@@ -103,6 +121,8 @@ class Expression:
             self.arbre = ast.Expression(body=ast.Constant(brute))
             return
         if isinstance(brute, list):
+            if len(brute) > MAX_TAILLE_TABLEAU:
+                raise BlocInvalide(f"Tableau trop grand : {MAX_TAILLE_TABLEAU} cases au plus.", chemin)
             self.texte = json.dumps(brute, ensure_ascii=False)
             self.arbre = ast.Expression(
                 body=ast.List(elts=[Expression(v, chemin).arbre.body for v in brute], ctx=ast.Load())
@@ -110,11 +130,17 @@ class Expression:
             return
         if not isinstance(brute, str) or not brute.strip():
             raise BlocInvalide("Expression manquante : ce bloc attend une valeur.", chemin)
+        if len(brute) > MAX_LONGUEUR_EXPRESSION:
+            raise BlocInvalide(f"Expression trop longue : {MAX_LONGUEUR_EXPRESSION} caractères au plus.", chemin)
         self.texte = brute.strip()
         try:
             arbre = ast.parse(_traduire(self.texte).strip(), mode="eval")
-        except SyntaxError:
+        except (SyntaxError, ValueError):
             raise BlocInvalide(f"Expression illisible : « {self.texte} ».", chemin)
+        except (RecursionError, MemoryError):
+            raise BlocInvalide("Expression trop complexe : découpe-la en plusieurs lignes.", chemin)
+        if _profondeur(arbre) > MAX_PROFONDEUR_EXPRESSION:
+            raise BlocInvalide("Expression trop complexe : découpe-la en plusieurs lignes.", chemin)
         for noeud in ast.walk(arbre):
             if not isinstance(noeud, _NOEUDS_AUTORISES):
                 raise BlocInvalide(f"Expression non autorisée : « {self.texte} ».", chemin)
@@ -215,7 +241,7 @@ def _position(tableau, position, ligne, nom):
 def _borner(v, ligne):
     if isinstance(v, str) and len(v) > MAX_TEXTE:
         raise ErreurExecution(f"Texte trop long (plus de {MAX_TEXTE} caractères).", ligne)
-    if _nombre(v) and (not math.isfinite(v) or abs(v) > MAX_NOMBRE):
+    if _nombre(v) and ((isinstance(v, float) and not math.isfinite(v)) or abs(v) > MAX_NOMBRE):
         raise ErreurExecution("Nombre trop grand : vérifie que ta variable ne grandit pas sans fin.", ligne)
     return v
 
@@ -303,6 +329,7 @@ class Programme:
     def __init__(self, blocs):
         self.lignes = []  # pseudo-code affiché, une entrée par ligne
         self.nb_boucles = 0
+        self.nb_blocs = 0
         if not isinstance(blocs, list):
             raise BlocInvalide("Le programme doit être une liste de blocs.")
         self.corps = self._sequence(blocs, "blocs", 0)
@@ -323,6 +350,11 @@ class Programme:
         return nom
 
     def _bloc(self, bloc, chemin, niveau):
+        self.nb_blocs += 1
+        if self.nb_blocs > MAX_BLOCS:
+            raise BlocInvalide(f"Algorithme trop long : {MAX_BLOCS} instructions au plus.", chemin[:200])
+        if niveau > MAX_IMBRICATION:
+            raise BlocInvalide(f"Trop de blocs imbriqués : {MAX_IMBRICATION} niveaux au plus.", chemin[:200])
         if not isinstance(bloc, dict) or bloc.get("type") not in TYPES_BLOCS:
             raise BlocInvalide(
                 "Bloc inconnu : les blocs disponibles sont affectation, si, tant_que, pour et ecrire.",
@@ -440,13 +472,24 @@ class _Arret(Exception):
     pass
 
 
+def _poids(valeur):
+    """Place d'une valeur dans la trace : 1 par nombre, davantage pour un long texte, la somme pour un tableau."""
+    if isinstance(valeur, list):
+        return 1 + sum(_poids(v) for v in valeur)
+    if isinstance(valeur, str):
+        return 1 + len(valeur) // 16
+    return 1
+
+
 class _Execution:
     def __init__(self, programme, entrees, points):
         self.programme = programme
         self.variables = copy.deepcopy(entrees or {})
         self.points = points or []
         self.trace = []
+        self.volume = 0
         self.console = []
+        self.valeurs_console = []  # pour chaque ligne affichée : ses valeurs seules, sans le texte fixe
         self.nb_affectations = {}
         self.nb_iterations = {}
         self.valeurs_points = {p["id"]: {"atteint": False, "valeur": None} for p in self.points}
@@ -458,6 +501,12 @@ class _Execution:
             raise ErreurExecution(
                 f"Arrêt après {MAX_PAS} pas : la boucle est probablement infinie. "
                 "Regarde comment évolue la variable de ta condition à chaque tour.",
+                ligne,
+            )
+        self.volume += 1 + len(description) // 16 + sum(_poids(v) for v in self.variables.values())
+        if self.volume > MAX_VOLUME_TRACE:
+            raise ErreurExecution(
+                "Exécution trop volumineuse : réduis la taille de tes tableaux ou le nombre de tours de boucle.",
                 ligne,
             )
         self.trace.append({
@@ -514,7 +563,8 @@ class _Execution:
                        f"{n.variable}[{position}] reçoit {_afficher(valeur)}")
 
     def _ecrire(self, n):
-        texte = " ".join(_afficher(self._eval(v, n.ligne)) for v in n.valeurs)
+        morceaux = [(v, _afficher(self._eval(v, n.ligne))) for v in n.valeurs]
+        texte = " ".join(m for _, m in morceaux)
         if len(self.console) >= MAX_LIGNES_CONSOLE:
             raise ErreurExecution(
                 f"Arrêt après {MAX_LIGNES_CONSOLE} lignes affichées : vérifie que ton « écrire » "
@@ -522,6 +572,8 @@ class _Execution:
                 n.ligne,
             )
         self.console.append(texte)
+        calcules = [m for v, m in morceaux if not (isinstance(v.arbre.body, ast.Constant) and isinstance(v.arbre.body.value, str))]
+        self.valeurs_console.append(" ".join(calcules) or texte)
         self._pas(n.ligne, f"affiche « {texte} »", ecrit=texte)
 
     def _si(self, n):
@@ -570,6 +622,8 @@ def executer(blocs, entrees=None, points_controle=None):
         run.executer(programme.corps)
     except ErreurExecution as e:
         erreur = {"message": e.message, "ligne": e.ligne}
+    except (OverflowError, RecursionError, MemoryError):
+        erreur = {"message": "Calcul trop grand : vérifie les valeurs de ton algorithme.", "ligne": None}
     if erreur is None:
         for p in run.points:
             if p["moment"]["type"] == "fin" and p["variable"] in run.variables:
@@ -580,6 +634,7 @@ def executer(blocs, entrees=None, points_controle=None):
         "lignes": programme.lignes,
         "trace": run.trace,
         "console": run.console,
+        "console_valeurs": run.valeurs_console,
         "variables_finales": run.variables,
         "points": run.valeurs_points,
         "erreur": erreur,
@@ -636,6 +691,14 @@ def consoles_egales(a, b):
     return len(a) == len(b) and all(x == y or valeurs_egales(x, y) for x, y in zip(a, b))
 
 
+def _mots(ligne):
+    return str(ligne).casefold().split()
+
+
+def _memes_mots(a, b):
+    return len(a) == len(b) and all(x == y or valeurs_egales(x, y) for x, y in zip(a, b))
+
+
 def comparer(prediction, resultat, points_controle):
     """Écran de comparaison point par point + console prédite vs réelle (F6)."""
     points = []
@@ -666,10 +729,28 @@ def comparer(prediction, resultat, points_controle):
         l["juste"] = l["predite"] is not None and l["reelle"] is not None and (
             l["predite"] == l["reelle"] or valeurs_egales(l["predite"], l["reelle"])
         )
-    sortie_juste = consoles_egales(console_predite, console_reelle)
+    sortie_exacte = consoles_egales(console_predite, console_reelle)
+    # Prédire, c'est trouver les valeurs : « 14 » ou « 14 2 » suffit pour « x vaut 14 » puis « y vaut 2 ».
+    # Une ligne faite uniquement de texte fixe (« Décollage ! ») reste à prédire telle quelle.
+    valeurs_reelles = (resultat.get("console_valeurs") or console_reelle)[: len(console_reelle)]
+    for l in lignes:
+        i = l["numero"] - 1
+        if not l["juste"] and l["predite"] and i < len(valeurs_reelles):
+            l["juste"] = _memes_mots(_mots(l["predite"]), _mots(valeurs_reelles[i]))
+    sortie_juste = sortie_exacte or (bool(lignes) and all(l["juste"] for l in lignes))
+    tous_predits = [m for ligne in console_predite for m in _mots(ligne)]
+    if not sortie_juste and valeurs_reelles and _memes_mots(tous_predits, [m for v in valeurs_reelles for m in _mots(v)]):
+        # Les bonnes valeurs dans le bon ordre, écrites sur une seule ligne : on les range sous chaque ligne réelle.
+        sortie_juste = True
+        lignes, debut = [], 0
+        for i, reelle in enumerate(console_reelle):
+            fin = debut + len(_mots(valeurs_reelles[i]))
+            lignes.append({"numero": i + 1, "predite": " ".join(tous_predits[debut:fin]), "reelle": reelle, "juste": True})
+            debut = fin
     return {
         "points": points,
         "console": lignes,
         "sortie_juste": sortie_juste,
+        "sortie_valeurs_seules": sortie_juste and not sortie_exacte,
         "tout_juste": sortie_juste and all(p["juste"] for p in points),
     }

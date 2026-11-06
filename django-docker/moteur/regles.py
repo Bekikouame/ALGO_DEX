@@ -9,7 +9,7 @@ import hmac
 import re
 import unicodedata
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from . import interpreteur
@@ -63,7 +63,11 @@ def creer_profil(pseudo):
         raise ErreurRegle(message, 400, "pseudo_invalide")
     if Profil.objects.filter(pseudo__iexact=pseudo).exists():
         raise ErreurRegle("Ce pseudo est déjà pris : choisis-en un autre.", 409, "pseudo_pris")
-    profil = Profil.objects.create(pseudo=pseudo)
+    try:
+        with transaction.atomic():
+            profil = Profil.objects.create(pseudo=pseudo)
+    except IntegrityError:  # deux envois simultanés du même pseudo
+        raise ErreurRegle("Ce pseudo est déjà pris : choisis-en un autre.", 409, "pseudo_pris")
     CarteMaitrise.objects.bulk_create(
         [CarteMaitrise(profil=profil, notion=n, etat="a_faire") for n in NOTIONS]
     )
@@ -271,7 +275,6 @@ def cockpit(profil):
             "id": profil.id,
             "pseudo": profil.pseudo,
             "derniere_visite": profil.derniere_visite,
-            "code_reprise": profil.code_reprise,
         },
         "carte": carte(profil),
         "notions_debloquees": ouvertes,
@@ -546,7 +549,7 @@ def soumettre(tentative, blocs=None):
             eleve["erreur"]["message"]
             if eleve["erreur"]
             else "Ta sortie ne correspond pas encore à ce que l'énoncé demande. "
-                 "Regarde la visualisation de ta boucle, puis corrige."
+                 "Regarde la visualisation de ton exécution, puis corrige."
         )
         return {"valide": False, "message": message, "console": eleve["console"]}
 

@@ -1,12 +1,15 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Check, CircleHelp, Eraser, Lock, Play, Scale, Wrench, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CircleHelp, Compass, Eraser, Lock, Play, Scale, Wrench, X } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { EditeurBlocs, type SuiviExecution } from "@/components/blocs/editeur";
 import { MessageErreur } from "@/components/coque";
 import { EcranComparaison } from "@/components/cycle/comparaison";
 import { EchelleIndices } from "@/components/cycle/indices";
+import { ETAPES_ESPACE } from "@/components/guides/contenus";
+import { InfoBulle } from "@/components/guides/info-bulle";
 import { FormulairePrediction } from "@/components/cycle/prediction";
 import { RobotAlgo } from "@/components/espace/illustrations";
 import { Avatar } from "@/components/marque";
@@ -24,8 +27,9 @@ import {
   type Tentative,
 } from "@/lib/api";
 import { compterBlocs, variablesConnues, type Bloc } from "@/lib/blocs";
+import { useGuideConsulte } from "@/lib/guides-apprenant";
 import { afficherValeur } from "@/lib/format";
-import { ecrireBrouillon, lireBrouillon } from "@/lib/profils";
+import { ecrireBrouillon, ecrireSolution, lireBrouillon, lireSolution } from "@/lib/profils";
 import { BarreControle, CeQuiSePasse, Console, ExplorateurVariables, FluxControle, StructuresDonnees, type Commandes } from "./execution";
 
 type VueDroite = "prediction" | "execution" | "comparaison";
@@ -34,6 +38,9 @@ const RANG: Etape[] = ["ecrit", "predite", "visualisee", "comparee", "corrigee",
 const atteint = (t: Tentative, e: Etape) => RANG.indexOf(t.etape_atteinte) >= RANG.indexOf(e);
 const ETAPES = ["Écrire", "Prédire", "Observer", "Comparer", "Valider"];
 const mouvementReduit = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// La visite n'est chargée que si l'utilisateur la demande.
+const VisiteGuidee = dynamic(() => import("@/components/guides/visite-guidee").then((m) => m.VisiteGuidee), { ssr: false });
 
 const CLE_PARTAGE = "algodex.labo.partage";
 const lirePartage = () => {
@@ -54,16 +61,20 @@ export function Laboratoire({
   depart,
   pseudo,
   aide,
+  profilId,
   onSoumis,
 }: {
   depart: Progression & { exercice: ExercicePublic };
   pseudo?: string;
+  profilId?: string;
   aide?: ReactNode;
   onSoumis: (resultat: Soumission, progression: Progression) => void;
 }) {
   const exercice = depart.exercice;
   const [tentative, setTentative] = useState(depart.tentative);
-  const [blocs, setBlocsBrut] = useState<Bloc[]>(() => lireBrouillon<Bloc[]>(depart.tentative.id) ?? []);
+  const [blocs, setBlocsBrut] = useState<Bloc[]>(
+    () => lireBrouillon<Bloc[]>(depart.tentative.id) ?? (profilId ? lireSolution<Bloc[]>(profilId, exercice.id) : null) ?? [],
+  );
   const [vue, setVue] = useState<VueDroite>(() => (depart.tentative.prediction ? "execution" : "prediction"));
   const [execution, setExecution] = useState<Execution | null>(null);
   const [perimee, setPerimee] = useState(false);
@@ -74,6 +85,14 @@ export function Laboratoire({
   const [refus, setRefus] = useState<{ message: string; console: string[] } | null>(null);
   const [rappel, setRappel] = useState<string | null>(null);
   const [aideOuverte, setAideOuverte] = useState(false);
+  const [visite, setVisite] = useState(false);
+  const guideConsulte = useGuideConsulte("espace");
+  // Au tout premier exercice, la visite s'ouvre une seule fois ; elle ne bloque rien et se ferme d'un clic.
+  useEffect(() => {
+    if (guideConsulte) return;
+    const minuteur = window.setTimeout(() => setVisite(true), 600);
+    return () => window.clearTimeout(minuteur);
+  }, [guideConsulte]);
   const [confirmerEffacement, setConfirmerEffacement] = useState(false);
 
   // Lecteur de la trace : avancer, reculer, rejouer, sans relancer l'algorithme.
@@ -174,6 +193,7 @@ export function Laboratoire({
         return;
       }
       setRefus(null);
+      if (profilId) ecrireSolution(profilId, exercice.id, blocs);
       onSoumis(resultat, r);
     });
 
@@ -259,6 +279,18 @@ export function Laboratoire({
         <div className="ml-auto flex items-center gap-2">
           <button
             type="button"
+            onClick={() => setVisite(true)}
+            aria-label="Découvrir l'espace de travail"
+            title="Découvrir l'espace de travail"
+            className="relative flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-2 text-sm font-medium hover:border-primary/50"
+          >
+            <Compass size={16} aria-hidden /> <span className="hidden 2xl:inline">Découvrir l&apos;espace de travail</span>
+            <span className="2xl:hidden">Guide</span>
+            {!guideConsulte && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-rose" aria-hidden />}
+          </button>
+          <button
+            type="button"
+            data-guide="aide"
             onClick={() => setAideOuverte(true)}
             className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-2 text-sm font-medium hover:border-primary hover:text-primary"
           >
@@ -276,7 +308,7 @@ export function Laboratoire({
       >
         {/* ALGORITHM EDITOR */}
         <section aria-label="Éditeur d'algorithme" className="flex min-w-0 flex-col gap-4 p-4 sm:p-6 lg:w-[var(--part)] lg:overflow-y-auto">
-          <div className="rounded-2xl border border-border bg-surface px-4 py-3">
+          <div data-guide="enonce" className="rounded-2xl border border-border bg-surface px-4 py-3">
             <p className="whitespace-pre-line text-sm">{exercice.enonce}</p>
             {Object.keys(exercice.entrees).length > 0 && (
               <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
@@ -290,7 +322,7 @@ export function Laboratoire({
             )}
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col rounded-3xl border border-[#4b43b8]/60 bg-[#111338] p-3 shadow-[0_30px_80px_-30px_rgb(108_92_252/0.55)]">
+          <div data-guide="editeur" className="flex min-h-0 flex-1 flex-col rounded-3xl border border-[#4b43b8]/60 bg-[#111338] p-3 shadow-[0_30px_80px_-30px_rgb(108_92_252/0.55)]">
             <div className="mb-2.5 flex flex-wrap items-center gap-2 px-1 text-[#e4e6ff]">
               <span className="flex gap-1.5" aria-hidden>
                 <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
@@ -298,6 +330,9 @@ export function Laboratoire({
                 <span className="h-3 w-3 rounded-full bg-[#28c840]" />
               </span>
               <span className="rounded-lg bg-[#0b0d29] px-3 py-1 text-xs font-semibold">mon algorithme</span>
+              <InfoBulle etiquette="À quoi sert l'éditeur" clair>
+                Compose ton algorithme par blocs : clique sur « + » pour ajouter une ligne, puis sur chaque partie à compléter.
+              </InfoBulle>
               {verrouille && (
                 <span className="flex items-center gap-1 text-xs text-[#b4a3ff]" title="Tu pourras le modifier après avoir comparé ta prédiction à la réalité.">
                   <Lock size={12} /> figé jusqu&apos;à la comparaison
@@ -315,6 +350,7 @@ export function Laboratoire({
                         return;
                       }
                       setConfirmerEffacement(false);
+                      setRefus(null);
                       setBlocs([]);
                     }}
                     className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors disabled:opacity-30 ${
@@ -326,6 +362,7 @@ export function Laboratoire({
                 )}
                 <button
                   type="button"
+                  data-guide="executer"
                   onClick={executer}
                   disabled={occupe || !compterBlocs(blocs)}
                   className="bouton-lumineux flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-semibold text-white disabled:opacity-40"
@@ -381,9 +418,14 @@ export function Laboratoire({
         </div>
 
         {/* VISUALIZE CODE EXECUTION */}
-        <section aria-label="Laboratoire d'exécution" className="flex min-w-0 flex-1 flex-col gap-4 bg-surface/40 p-4 sm:p-6 lg:overflow-y-auto">
+        <section data-guide="laboratoire" aria-label="Laboratoire d'exécution" className="flex min-w-0 flex-1 flex-col gap-4 bg-surface/40 p-4 sm:p-6 lg:overflow-y-auto">
           <div className="flex flex-wrap items-end justify-between gap-2">
-            <h2 className="font-display text-2xl">Laboratoire d&apos;exécution</h2>
+            <h2 className="flex items-center gap-1.5 font-display text-2xl">
+              Laboratoire d&apos;exécution
+              <InfoBulle etiquette="À quoi sert le laboratoire">
+                Il rejoue ton algorithme pas à pas : la ligne en cours, les variables, les boucles et la console.
+              </InfoBulle>
+            </h2>
             <span className="font-hand text-lg text-primary">écris, exécute, observe, comprends</span>
           </div>
           {erreur && <MessageErreur message={erreur} />}
@@ -476,8 +518,10 @@ export function Laboratoire({
         </section>
       </div>
 
+      {visite && <VisiteGuidee cle="espace" titre="Découvrir l'espace de travail" etapes={ETAPES_ESPACE} onFermer={() => setVisite(false)} />}
+
       {/* Aide et échelle d'indices, à la demande : l'écran de travail reste dégagé. */}
-      <div className={`fixed inset-0 z-50 ${aideOuverte ? "" : "pointer-events-none"}`} aria-hidden={!aideOuverte}>
+      <div className={`fixed inset-0 z-50 ${aideOuverte ? "" : "pointer-events-none"}`} aria-hidden={!aideOuverte} inert={!aideOuverte}>
         <div onClick={() => setAideOuverte(false)} className={`absolute inset-0 bg-black/30 transition-opacity duration-300 ${aideOuverte ? "opacity-100" : "opacity-0"}`} />
         <aside
           role="dialog"

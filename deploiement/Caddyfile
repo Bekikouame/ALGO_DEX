@@ -4,6 +4,11 @@
 {$DOMAINE} {
 	encode zstd gzip
 
+	# Requêtes JSON de quelques kilo-octets : au-delà, c'est un abus.
+	request_body {
+		max_size 512KB
+	}
+
 	# Routes d'administration du moteur : introuvables depuis l'adresse publique.
 	@administration path /api/exercices /api/exercices/* /api/docs /api/docs/* /api/schema /api/schema/* /api/redoc /api/redoc/*
 	respond @administration 404

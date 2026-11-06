@@ -2,9 +2,9 @@
 
 import { BookOpen, ChevronDown, ChevronRight, Gauge, House, Menu, PanelLeftClose, PanelLeftOpen, Route, Telescope, X } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { quitterProfil } from "@/lib/profils";
+import { FenetreQuitterProfil } from "./quitter-profil";
 import { RobotAlgo } from "./espace/illustrations";
 import { Avatar, Logo, Marque } from "./marque";
 
@@ -124,7 +124,7 @@ function SousMenu({
         <div className="ml-[1.15rem] mt-2 flex flex-col border-l border-border pb-1 pl-2.5">
           {groupes.map(({ groupe, rubriques }, g) => (
             <div key={groupe} className={g > 0 ? "mt-3 border-t border-border/70 pt-3" : ""}>
-              <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-muted/80">{groupe}</p>
+              <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-muted">{groupe}</p>
               <ul className="flex flex-col gap-sous">
                 {rubriques.map(({ href, libelle, actifSur }) => {
                   const actif = !!actifSur && commencePar(chemin, actifSur);
@@ -174,11 +174,11 @@ function Chevron({ ouvert, controle, onBasculer, sombre, tabIndex }: { ouvert: b
   );
 }
 
-function useChangerProfil() {
-  const router = useRouter();
-  return () => {
-    quitterProfil();
-    router.push("/");
+function useChangerProfil(pseudo?: string) {
+  const [ouverte, setOuverte] = useState(false);
+  return {
+    demander: () => setOuverte(true),
+    fenetre: ouverte && pseudo ? <FenetreQuitterProfil pseudo={pseudo} onRester={() => setOuverte(false)} /> : null,
   };
 }
 
@@ -202,7 +202,7 @@ export function BarreLaterale({
 }) {
   const chemin = usePathname();
   const [mode, basculer] = useModeBarre(compacteParDefaut);
-  const changerProfil = useChangerProfil();
+  const { demander: changerProfil, fenetre: fenetreQuitter } = useChangerProfil(pseudo);
   const compacte = mode === "compacte";
   // Le sous-menu de Ressources : ouvert dans sa section, repliable par son chevron.
   const [replie, setReplie] = useState(false);
@@ -305,6 +305,7 @@ export function BarreLaterale({
             </button>
           ))}
       </div>
+      {fenetreQuitter}
     </aside>
   );
 }
@@ -341,7 +342,7 @@ export function BoutonMenu({ onOuvrir }: { onOuvrir: () => void }) {
 /** Menu coulissant : fond assombri, fermeture par la croix, Échap, le fond, ou après le choix d'une rubrique. */
 export function MenuMobile({ ouvert, onFermer, pseudo }: { ouvert: boolean; onFermer: () => void; pseudo?: string }) {
   const chemin = usePathname();
-  const changerProfil = useChangerProfil();
+  const { demander: changerProfil, fenetre: fenetreQuitter } = useChangerProfil(pseudo);
   const [replie, setReplie] = useState(false);
 
   useEffect(() => {
@@ -412,6 +413,7 @@ export function MenuMobile({ ouvert, onFermer, pseudo }: { ouvert: boolean; onFe
             </span>
           </button>
         )}
+        {fenetreQuitter}
       </div>
     </div>
   );

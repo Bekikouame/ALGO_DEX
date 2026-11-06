@@ -377,7 +377,7 @@ export function DemoExecution({ ref }: { ref?: Ref<CommandesDemo> }) {
             </ul>
             <div
               className={`mt-auto rounded-xl border px-3 py-1.5 transition-opacity ${
-                sortie !== null ? "border-[#3ddbb0]/50 bg-[#3ddbb0]/10" : "border-white/10 opacity-40"
+                sortie !== null ? "border-[#3ddbb0]/50 bg-[#3ddbb0]/10" : "border-white/10 opacity-80"
               }`}
             >
               <div className="text-[11px] text-[#9aa1cc]">Résultat</div>
@@ -472,7 +472,7 @@ function Chaine({ algo, k, fin, sortie }: { algo: Algo; k: number; fin: boolean;
                   ? "border-[#3ddbb0] bg-[#3ddbb0]/15 text-[#3ddbb0]"
                   : atteint
                     ? "border-[#6c5cfc] bg-[#6c5cfc]/25 text-white"
-                    : "border-white/15 text-white/40"
+                    : "border-white/15 text-white/70"
               }`}
             >
               {String(x.valeur)}
@@ -484,7 +484,7 @@ function Chaine({ algo, k, fin, sortie }: { algo: Algo; k: number; fin: boolean;
       <span
         key={fin ? "revele" : "mystere"}
         className={`flex h-8 min-w-11 items-center justify-center rounded-lg border-2 px-2 font-mono text-sm font-semibold transition-colors ${
-          fin ? "revele border-[#3ddbb0] bg-[#3ddbb0]/15 text-[#3ddbb0]" : "mystere border-white/15 text-white/40"
+          fin ? "revele border-[#3ddbb0] bg-[#3ddbb0]/15 text-[#3ddbb0]" : "mystere border-white/15 text-white/70"
         }`}
       >
         {fin ? sortie : "?"}

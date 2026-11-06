@@ -20,6 +20,8 @@ services:
   moteur:
     build: ./django-docker
     restart: unless-stopped
+    # Filet de sécurité : si un calcul s'emballe, seul ce conteneur redémarre, pas toute la machine.
+    mem_limit: 768m
     depends_on:
       base:
         condition: service_healthy
@@ -58,7 +60,8 @@ services:
     volumes:
       - ./deploiement/sauvegardes:/sauvegardes
       - ./deploiement/sauvegarder.sh:/sauvegarder.sh:ro
-    entrypoint: ["sh", "-c", "while true; do sh /sauvegarder.sh; sleep 86400; done"]
+    # La première sauvegarde attend 5 minutes : les migrations et le contenu sont alors en place.
+    entrypoint: ["sh", "-c", "sleep 300; while true; do sh /sauvegarder.sh; sleep 86400; done"]
 
   site:
     build:

@@ -1,3 +1,12 @@
+import json
+from unittest.mock import patch
+
+from django.conf import settings
+from django.contrib.auth.models import User
+from django.core.cache import cache
+from django.test import Client
+from rest_framework.settings import api_settings
+
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.management import call_command
@@ -6,7 +15,7 @@ from rest_framework.test import APITestCase
 
 from . import interpreteur
 from .interpreteur import BlocInvalide
-from .models import CarteMaitrise, Exercice, Tentative
+from .models import CarteMaitrise, Exercice, Profil, Tentative
 from .views import LimiteCreationProfil, LimiteReprise
 
 SOMME_TABLEAU = [
@@ -151,7 +160,9 @@ class ParcoursTests(APITestCase):
         self.assertRegex(code, r"^[A-Z2-9]{4}-[A-Z2-9]{4}$")
         self.assertNotIn("code_reprise", self.client.get(f"/api/profil?ids={cree['id']}").json()[0])
         cockpit = self.client.get(f"/api/cockpit?profil_id={cree['id']}").json()
-        self.assertEqual(cockpit["profil"]["code_reprise"], code)
+        self.assertNotIn("code_reprise", cockpit["profil"])
+        affiche = self.client.post("/api/profil/code", {"profil_id": cree["id"]}, format="json").json()
+        self.assertEqual(affiche["code_reprise"], code)
         reprendre = lambda pseudo, c: self.client.post("/api/profil/reprendre", {"pseudo": pseudo, "code": c}, format="json")
         # pseudo sans tenir compte de la casse, code avec ou sans tiret, en minuscules
         r = reprendre("LINA", code.replace("-", "").lower())
@@ -417,3 +428,122 @@ class BackOfficeTests(APITestCase):
         self.assertEqual(self.client.delete(f"/api/exercices/{exo.id}").status_code, 409)
         self.assertEqual(self.client.patch(f"/api/exercices/{exo.id}", {"actif": False}, format="json").status_code, 200)
         self.assertTrue(Tentative.objects.filter(exercice=exo).exists())
+
+
+class BornesExecutionTests(APITestCase):
+    """Un programme démesuré est refusé ou arrêté tôt : il ne sature ni la mémoire ni la réponse."""
+
+    BOUCLE = {"type": "tant_que", "condition": "vrai", "corps": [{"type": "affectation", "variable": "i", "valeur": "1"}]}
+
+    def test_trace_bornee(self):
+        blocs = [{"type": "affectation", "variable": "t", "valeur": [0] * 1000}, self.BOUCLE]
+        r = interpreteur.executer(blocs)
+        self.assertIn("volumineuse", r["erreur"]["message"])
+        self.assertLess(len(json.dumps(r)), 5_000_000)
+
+    def test_programme_legitime_non_touche(self):
+        r = interpreteur.executer([self.BOUCLE])
+        self.assertIn("5000 pas", r["erreur"]["message"])
+
+    def test_formes_demesurees_refusees(self):
+        cas = [
+            [{"type": "affectation", "variable": "t", "valeur": [0] * 1001}],
+            [{"type": "ecrire", "valeurs": ["+".join(["1"] * 20000)]}],
+            [{"type": "ecrire", "valeurs": ["+".join(["1"] * 200)]}],
+            [{"type": "ecrire", "valeurs": ["non " * 300 + "vrai"]}],
+            [{"type": "ecrire", "valeurs": ["1"]}] * 501,
+        ]
+        imbrique = [{"type": "ecrire", "valeurs": ["1"]}]
+        for _ in range(3000):
+            imbrique = [{"type": "si", "condition": "vrai", "alors": imbrique}]
+        cas.append(imbrique)
+        for blocs in cas:
+            with self.assertRaises(interpreteur.BlocInvalide):
+                interpreteur.executer(blocs)
+
+    def test_tres_grand_nombre_sans_plantage(self):
+        grand = "9" * 400
+        r = interpreteur.executer([
+            {"type": "affectation", "variable": "x", "valeur": grand},
+            {"type": "ecrire", "valeurs": ["x * x"]},
+        ])
+        self.assertIsNotNone(r["erreur"])
+
+
+class ProtectionsApiTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+
+    def test_identifiants_inconnus_lisibles(self):
+        inconnu = "00000000-0000-4000-8000-000000000000"
+        for url in (f"/api/cockpit?profil_id={inconnu}", "/api/cockpit?profil_id=pas-un-uuid"):
+            r = self.client.get(url)
+            self.assertEqual(r.status_code, 404)
+            self.assertEqual(r.json()["code"], "profil_inconnu")
+
+    def test_pseudo_refuse_non_compte(self):
+        limites = {**api_settings.DEFAULT_THROTTLE_RATES, "creation_profil": "2/hour"}
+        with patch.object(LimiteCreationProfil, "THROTTLE_RATES", limites):
+            for _ in range(5):
+                self.assertEqual(self.client.post("/api/profil", {"pseudo": "a b"}, format="json").status_code, 400)
+            self.assertEqual(self.client.post("/api/profil", {"pseudo": "lea"}, format="json").status_code, 201)
+
+    def test_pseudo_simultane_sans_erreur_500(self):
+        self.client.post("/api/profil", {"pseudo": "mia"}, format="json")
+        # La vérification préalable voit le pseudo libre, puis la base refuse le doublon.
+        with patch("django.db.models.query.QuerySet.exists", return_value=False):
+            r = self.client.post("/api/profil", {"pseudo": "mia"}, format="json")
+        self.assertEqual(r.status_code, 409)
+
+    def test_corps_trop_gros(self):
+        r = self.client.post("/api/profil", data="x" * 600_000, content_type="application/json")
+        self.assertEqual(r.status_code, 413)
+
+    def test_connexion_admin_limitee(self):
+        User.objects.create_superuser("chef", password="Bon-Mot2Passe-Long!")
+        url = f"/{settings.CHEMIN_ADMIN}login/"
+        fichiers = {"default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+                    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}}
+        with self.settings(ADMIN_MAX_ECHECS=3, STORAGES=fichiers):
+            client = Client()
+            for _ in range(3):
+                self.assertEqual(client.post(url, {"username": "chef", "password": "faux"}).status_code, 200)
+            self.assertEqual(client.post(url, {"username": "chef", "password": "faux"}).status_code, 429)
+            self.assertEqual(client.post(url, {"username": "chef", "password": "Bon-Mot2Passe-Long!"}).status_code, 429)
+            cache.clear()
+            self.assertEqual(Client().post(url, {"username": "chef", "password": "Bon-Mot2Passe-Long!"}).status_code, 302)
+
+
+class ConsolePreditesTests(APITestCase):
+    """Le test mesure le raisonnement : les bonnes valeurs suffisent, sans recopier le texte fixe."""
+
+    BLOCS = [
+        {"type": "affectation", "variable": "x", "valeur": "14"},
+        {"type": "affectation", "variable": "y", "valeur": "2"},
+        {"type": "ecrire", "valeurs": ['"x vaut"', "x"]},
+        {"type": "ecrire", "valeurs": ['"y vaut"', "y"]},
+        {"type": "ecrire", "valeurs": ['"Fin !"']},
+    ]
+
+    def verdict(self, sortie):
+        resultat = interpreteur.executer(self.BLOCS)
+        return interpreteur.comparer({"points": {}, "sortie": sortie}, resultat, [])
+
+    def test_formes_acceptees(self):
+        for sortie in (
+            ["x vaut 14", "y vaut 2", "Fin !"],
+            ["14", "2", "Fin !"],
+            ["14 2 Fin !"],
+            ["x vaut 14", "2", "fin !"],
+        ):
+            self.assertTrue(self.verdict(sortie)["sortie_juste"], sortie)
+
+    def test_reponses_fausses_refusees(self):
+        for sortie in (["14", "3", "Fin !"], ["2", "14", "Fin !"], ["14 2"], ["14"], ["x vaut 2", "y vaut 14", "Fin !"]):
+            self.assertFalse(self.verdict(sortie)["sortie_juste"], sortie)
+
+    def test_valeurs_seules_signalees_et_rangees(self):
+        c = self.verdict(["14 2 Fin !"])
+        self.assertTrue(c["sortie_valeurs_seules"])
+        self.assertEqual([l["predite"] for l in c["console"]], ["14", "2", "fin !"])
+        self.assertFalse(self.verdict(["x vaut 14", "y vaut 2", "Fin !"])["sortie_valeurs_seules"])

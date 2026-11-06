@@ -50,7 +50,7 @@ export default function CoursAlgorithmique() {
           <div className="mt-5 grid items-center gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
             <div className="relative z-10">
               <span className="inline-flex rounded-lg bg-primary-soft px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-primary">Cours</span>
-              <h1 id="titre-cours" className="mt-4 font-display text-[3.4rem] leading-none tracking-tight text-text sm:text-[4.25rem]">
+              <h1 id="titre-cours" className="mt-4 font-display text-[2.6rem] leading-none min-[360px]:text-[3.4rem] tracking-tight text-text sm:text-[4.25rem]">
                 {COURS.titre}
               </h1>
               <p className="mt-5 max-w-md text-[17px] leading-relaxed text-text/75">

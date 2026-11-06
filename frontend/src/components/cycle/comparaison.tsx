@@ -21,7 +21,7 @@ export function EcranComparaison({ comparaison }: { comparaison: Comparaison }) 
           </h2>
           <p className="text-sm text-muted">
             {justes} point{justes > 1 ? "s" : ""} sur {comparaison.points.length} ·{" "}
-            {comparaison.sortie_juste ? "sortie identique" : "la sortie diffère"}
+            {comparaison.sortie_valeurs_seules ? "valeurs justes" : comparaison.sortie_juste ? "sortie identique" : "la sortie diffère"}
           </p>
         </div>
       </div>

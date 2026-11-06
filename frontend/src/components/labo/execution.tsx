@@ -30,7 +30,7 @@ export function BarreControle({ c, total }: { c: Commandes; total: number }) {
   const fin = c.k >= c.dernier;
   const bouton = "flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface text-text transition-colors hover:border-primary hover:text-primary disabled:opacity-35";
   return (
-    <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Contrôles d'exécution">
+    <div data-guide="commandes" className="flex flex-wrap items-center gap-2" role="group" aria-label="Contrôles d'exécution">
       <button type="button" className={bouton} onClick={() => c.aller(0)} disabled={c.k === 0} aria-label="Revenir au début" title="Revenir au début">
         <RotateCcw size={16} />
       </button>
@@ -264,7 +264,7 @@ export function Console({ execution, k }: { execution: Execution; k: number }) {
         <Terminal size={14} className="opacity-70" /> Console
       </div>
       <pre className="min-h-16 overflow-x-auto px-4 py-2.5 font-mono text-sm leading-6">
-        {sorties.length ? sorties.map((l, n) => <div key={n} className={n === sorties.length - 1 ? "revele" : ""}>{l}</div>) : <span className="opacity-40">(rien d&apos;affiché)</span>}
+        {sorties.length ? sorties.map((l, n) => <div key={n} className={n === sorties.length - 1 ? "revele" : ""}>{l}</div>) : <span className="opacity-70">(rien d&apos;affiché)</span>}
         {fin && execution.erreur && (
           <div className="mt-1 flex gap-2 whitespace-pre-wrap text-[#ff8a7a]">
             <TriangleAlert size={15} className="mt-1 shrink-0" />

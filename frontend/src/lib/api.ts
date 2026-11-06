@@ -1,3 +1,5 @@
+import { profilPerdu } from "./profils";
+
 // Client de l'API du moteur. Le cockpit n'affiche que ce que le serveur renvoie :
 // aucun état (carte, verdict, plan de cascade) n'est calculé ici.
 
@@ -39,7 +41,7 @@ export interface PlanCascade {
 }
 
 export interface Cockpit {
-  profil: { id: string; pseudo: string; derniere_visite: string; code_reprise: string };
+  profil: { id: string; pseudo: string; derniere_visite: string };
   carte: LigneCarte[];
   notions_debloquees: Notion[];
   prochaine_notion: Notion | null;
@@ -160,6 +162,7 @@ export interface Comparaison {
   }[];
   console: { numero: number; predite: string | null; reelle: string | null; juste: boolean }[];
   sortie_juste: boolean;
+  sortie_valeurs_seules?: boolean;
   tout_juste: boolean;
   erreur: { message: string; ligne: number | null } | null;
 }
@@ -201,10 +204,12 @@ async function appel<T>(chemin: string, options: RequestInit = {}): Promise<T> {
       cache: "no-store",
     });
   } catch {
-    throw new ErreurApi("Le moteur ne répond pas. Vérifie que le serveur Django est lancé.", 0);
+    throw new ErreurApi("Connexion impossible. Vérifie ta connexion à Internet, puis réessaie.", 0);
   }
   const corps = await reponse.json().catch(() => null);
   if (!reponse.ok) {
+    if (corps?.code === "profil_inconnu") profilPerdu();
+    if (reponse.status >= 500) throw new ErreurApi("Une erreur est survenue de notre côté. Réessaie dans un instant.", reponse.status, corps?.code);
     const detail =
       corps?.detail ??
       (corps && typeof corps === "object" ? Object.values(corps).flat().join(" ") : null) ??
@@ -220,6 +225,7 @@ export const api = {
   profils: (ids: string[]) => appel<Profil[]>(`profil?ids=${ids.join(",")}`),
   creerProfil: (pseudo: string) => appel<Profil & { code_reprise: string }>("profil", { method: "POST", body: json({ pseudo }) }),
   reprendreProfil: (pseudo: string, code: string) => appel<Profil>("profil/reprendre", { method: "POST", body: json({ pseudo, code }) }),
+  codeReprise: (profilId: string) => appel<{ code_reprise: string }>("profil/code", { method: "POST", body: json({ profil_id: profilId }) }),
   chapitresLus: (profilId: string) => appel<{ termines: string[] }>(`cours?profil_id=${profilId}`),
   marquerChapitre: (profilId: string, chapitre: string, termine: boolean) =>
     appel<{ termines: string[] }>("cours", { method: "POST", body: json({ profil_id: profilId, chapitre, termine }) }),

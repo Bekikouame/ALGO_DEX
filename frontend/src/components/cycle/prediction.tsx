@@ -5,6 +5,19 @@ import { useState } from "react";
 import type { PointControle, Prediction } from "@/lib/api";
 import { afficherValeur, decrireMoment } from "@/lib/format";
 
+/** Ce qu'il faut écrire dans la console prédite, avec un exemple qui n'est pas celui de l'exercice. */
+export function AideConsole() {
+  return (
+    <span className="mb-2 block text-sm text-muted">
+      Écris ce que l&apos;ordinateur affichera : <strong className="text-text">une ligne pour chaque « écrire » exécuté</strong>, dans l&apos;ordre.
+      Dans une boucle, chaque tour ajoute une ligne. Le texte entre guillemets se recopie, et une variable est remplacée par sa valeur.
+      <span className="mt-1.5 block rounded-lg bg-surface-2 px-3 py-2 font-mono text-xs text-text">
+        Exemple, si t vaut 5 : écrire(&quot;total :&quot;, t) → total : 5
+      </span>
+    </span>
+  );
+}
+
 /** Trace guidée (F4) : 2 à 4 points de contrôle + la sortie finale. */
 export function FormulairePrediction({
   points,
@@ -84,11 +97,12 @@ export function FormulairePrediction({
 
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-medium">Et la sortie finale ?</span>
-        <span className="text-xs text-muted">Une ligne par affichage, dans l&apos;ordre.</span>
+        <AideConsole />
         <textarea
           value={sortie}
           onChange={(e) => setSortie(e.target.value)}
           rows={3}
+          placeholder={"1re ligne affichée\n2e ligne affichée"}
           className="rounded-xl border border-border bg-bg px-3 py-2 font-mono text-sm outline-none focus:border-primary"
         />
       </label>

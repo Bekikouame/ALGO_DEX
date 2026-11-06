@@ -51,6 +51,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "moteur.securite.LimiteCorpsRequete",
+    "moteur.securite.LimiteConnexionAdmin",
     # Sert les fichiers statiques (CSS du back-office) sans serveur web à part.
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -188,20 +190,37 @@ if not DEBUG:
 CHEMIN_ADMIN = os.environ.get("DJANGO_CHEMIN_ADMIN", "admin/")
 
 
+# Connexion au back-office : 5 échecs par adresse IP, puis 15 minutes d'attente.
+ADMIN_MAX_ECHECS = int(os.environ.get("DJANGO_ADMIN_MAX_ECHECS", "5"))
+ADMIN_BLOCAGE_SECONDES = int(os.environ.get("DJANGO_ADMIN_BLOCAGE_SECONDES", "900"))
+
+
+# Journaux : les erreurs et leur cause vont sur la sortie d'erreur, lue par « docker compose logs moteur ».
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"simple": {"format": "{asctime} {levelname} {name} : {message}", "style": "{"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "simple"}},
+    "root": {"handlers": ["console"], "level": "WARNING"},
+    "loggers": {
+        "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
+}
+
+
 # API du moteur
 # Par défaut tout est réservé aux administrateurs (back-office) ; les routes
 # apprenant ouvrent explicitement l'accès (moteur.views.VueApprenant).
 
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.BasicAuthentication",
-    ],
+    # Pas d'authentification HTTP Basic : ses essais de mot de passe échapperaient à la limite de connexion.
+    "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAdminUser"],
     # Limites par adresse IP (routes apprenant). Une classe entière peut partager une IP : limites larges.
     "DEFAULT_THROTTLE_RATES": {
         "apprenant": os.environ.get("DJANGO_LIMITE_APPRENANT", "600/min"),
-        "creation_profil": os.environ.get("DJANGO_LIMITE_CREATION_PROFIL", "60/hour"),
+        "creation_profil": os.environ.get("DJANGO_LIMITE_CREATION_PROFIL", "120/hour"),
+        "execution": os.environ.get("DJANGO_LIMITE_EXECUTION", "300/min"),
         # Reprise par code : stricte, pour rendre impossible de deviner un code en essayant.
         "reprise": os.environ.get("DJANGO_LIMITE_REPRISE", "10/hour"),
     },

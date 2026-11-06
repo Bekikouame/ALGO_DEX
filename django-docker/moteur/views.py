@@ -7,11 +7,12 @@ et renvoient ce que le moteur a calculé.
 import uuid
 
 from django.db.models import RestrictedError
-from django.shortcuts import get_object_or_404
+from django.http import Http404, JsonResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
@@ -23,6 +24,7 @@ from .models import Exercice, Profil, Tentative
 from .regles import ErreurRegle
 from .serializers import (
     ChapitreLuSerializer,
+    CodeProfilSerializer,
     ExecuterSerializer,
     ExerciceSerializer,
     ProfilCreationSerializer,
@@ -35,6 +37,24 @@ from .serializers import (
 )
 
 
+# Identifiant malformé ou objet absent : un message pour l'étudiant, jamais celui du framework.
+INTROUVABLES = {
+    "profil_id": ("Ce profil n'existe plus sur ce serveur.", "profil_inconnu"),
+    "exercice_id": ("Cet exercice n'existe pas.", "exercice_inconnu"),
+    "tentative_id": ("Cet exercice n'est plus disponible : reviens à ton parcours.", "tentative_inconnue"),
+}
+
+
+def _trouver(source, pk, champ):
+    """L'objet demandé, ou une erreur 404 lisible avec un code que le site sait traiter."""
+    objets = source.objects.all() if hasattr(source, "objects") else source
+    objet = objets.filter(pk=pk).first()
+    if objet is None:
+        message, code = INTROUVABLES[champ]
+        raise ErreurRegle(message, 404, code)
+    return objet
+
+
 def gestionnaire_erreurs(exc, context):
     if isinstance(exc, ErreurRegle):
         return Response({"detail": exc.message, "code": exc.code}, status=exc.statut)
@@ -43,7 +63,24 @@ def gestionnaire_erreurs(exc, context):
             {"detail": exc.message, "chemin": exc.chemin, "code": "bloc_invalide"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    if isinstance(exc, (RecursionError, MemoryError)):  # JSON démesurément imbriqué
+        return Response({"detail": "Requête trop complexe.", "code": "requete_invalide"}, status=400)
+    if isinstance(exc, ValidationError) and isinstance(exc.detail, dict):
+        for champ, (message, code) in INTROUVABLES.items():
+            erreurs = exc.detail.get(champ)
+            if erreurs and getattr(erreurs[0], "code", None) == "invalid":
+                return Response({"detail": message, "code": code}, status=404)
+    if isinstance(exc, Http404):
+        return Response({"detail": "Cette ressource n'existe pas.", "code": "introuvable"}, status=404)
     return exception_handler(exc, context)
+
+
+def erreur_500(request):
+    """Erreur inattendue : la cause part dans les journaux, l'étudiant reçoit un message clair."""
+    return JsonResponse(
+        {"detail": "Une erreur est survenue de notre côté. Réessaie dans un instant.", "code": "erreur_serveur"},
+        status=500,
+    )
 
 
 class LimiteApprenant(AnonRateThrottle):
@@ -62,6 +99,12 @@ class LimiteReprise(AnonRateThrottle):
     """Reprise par pseudo et code : peu d'essais par heure."""
 
     scope = "reprise"
+
+
+class LimiteExecution(AnonRateThrottle):
+    """Exécution d'un algorithme : la route la plus coûteuse pour le serveur."""
+
+    scope = "execution"
 
 
 class VueApprenant(APIView):
@@ -88,12 +131,6 @@ def _valider(serializer_class, data):
 
 
 class ProfilView(VueApprenant):
-    def get_throttles(self):
-        limites = super().get_throttles()
-        if self.request.method == "POST":
-            limites.append(LimiteCreationProfil())
-        return limites
-
     @extend_schema(
         tags=["profil"],
         summary="Profils de l'appareil",
@@ -124,6 +161,12 @@ class ProfilView(VueApprenant):
     )
     def post(self, request):
         donnees = _valider(ProfilCreationSerializer, request.data)
+        # Un pseudo refusé par le formulaire n'est pas compté : une classe peut partager une adresse IP.
+        if message := regles.verifier_pseudo(regles.nettoyer_pseudo(donnees["pseudo"])):
+            raise ErreurRegle(message, 400, "pseudo_invalide")
+        limite = LimiteCreationProfil()
+        if not limite.allow_request(request, self):
+            self.throttled(request, limite.wait())
         profil = regles.creer_profil(donnees["pseudo"])
         return Response({**ProfilSerializer(profil).data, "code_reprise": profil.code_reprise}, status=201)
 
@@ -144,6 +187,19 @@ class RepriseView(VueApprenant):
         return Response(ProfilSerializer(profil).data)
 
 
+class CodeProfilView(VueApprenant):
+    @extend_schema(
+        tags=["profil"],
+        summary="Afficher son code de reprise",
+        description="Demandé seulement quand l'étudiant l'affiche : le code ne circule pas dans chaque réponse.",
+        request=CodeProfilSerializer,
+        responses=OpenApiTypes.OBJECT,
+    )
+    def post(self, request):
+        donnees = _valider(CodeProfilSerializer, request.data)
+        return Response({"code_reprise": _trouver(Profil, donnees["profil_id"], "profil_id").code_reprise})
+
+
 class CoursView(VueApprenant):
     @extend_schema(
         tags=["cours"],
@@ -153,7 +209,7 @@ class CoursView(VueApprenant):
     )
     def get(self, request):
         donnees = _valider(ProfilRefSerializer, request.query_params)
-        profil = get_object_or_404(Profil, pk=donnees["profil_id"])
+        profil = _trouver(Profil, donnees["profil_id"], "profil_id")
         return Response({"termines": regles.chapitres_lus(profil)})
 
     @extend_schema(
@@ -164,7 +220,7 @@ class CoursView(VueApprenant):
     )
     def post(self, request):
         donnees = _valider(ChapitreLuSerializer, request.data)
-        profil = get_object_or_404(Profil, pk=donnees["profil_id"])
+        profil = _trouver(Profil, donnees["profil_id"], "profil_id")
         return Response({"termines": regles.marquer_chapitre(profil, donnees["chapitre"], donnees["termine"])})
 
 
@@ -184,7 +240,7 @@ class CockpitView(VueApprenant):
     )
     def get(self, request):
         donnees = _valider(ProfilRefSerializer, request.query_params)
-        profil = get_object_or_404(Profil, pk=donnees["profil_id"])
+        profil = _trouver(Profil, donnees["profil_id"], "profil_id")
         return Response(regles.cockpit(profil))
 
 
@@ -199,7 +255,7 @@ class BibliothequeView(VueApprenant):
     )
     def get(self, request):
         donnees = _valider(ProfilRefSerializer, request.query_params)
-        profil = get_object_or_404(Profil, pk=donnees["profil_id"])
+        profil = _trouver(Profil, donnees["profil_id"], "profil_id")
         return Response(regles.bibliotheque(profil))
 
 
@@ -230,6 +286,8 @@ EXEMPLE_BLOCS = [
 
 
 class ExecuterView(VueApprenant):
+    throttle_classes = [LimiteApprenant, LimiteExecution]
+
     @extend_schema(
         tags=["executer"],
         summary="Exécuter pas à pas",
@@ -246,7 +304,7 @@ class ExecuterView(VueApprenant):
     )
     def post(self, request):
         donnees = _valider(ExecuterSerializer, request.data)
-        tentative = get_object_or_404(Tentative.objects.select_related("exercice"), pk=donnees["tentative_id"])
+        tentative = _trouver(Tentative.objects.select_related("exercice"), donnees["tentative_id"], "tentative_id")
         resultat = regles.executer(tentative, donnees.get("blocs"))
         return Response({**resultat, "tentative": regles.tentative_vue(tentative)})
 
@@ -267,8 +325,8 @@ class TentativeView(VueApprenant):
     )
     def post(self, request):
         donnees = _valider(TentativeOuvertureSerializer, request.data)
-        profil = get_object_or_404(Profil, pk=donnees["profil_id"])
-        exercice = get_object_or_404(Exercice, pk=donnees["exercice_id"])
+        profil = _trouver(Profil, donnees["profil_id"], "profil_id")
+        exercice = _trouver(Exercice, donnees["exercice_id"], "exercice_id")
         tentative, cree = regles.ouvrir_tentative(profil, exercice)
         reponse = regles.progression(tentative)
         reponse["exercice"] = regles.exercice_public(exercice)
@@ -282,7 +340,7 @@ class TentativeDetailView(VueApprenant):
         responses=OpenApiTypes.OBJECT,
     )
     def get(self, request, pk):
-        tentative = get_object_or_404(Tentative.objects.select_related("exercice", "profil"), pk=pk)
+        tentative = _trouver(Tentative.objects.select_related("exercice", "profil"), pk, "tentative_id")
         reponse = regles.progression(tentative)
         reponse["exercice"] = regles.exercice_public(tentative.exercice)
         return Response(reponse)
@@ -313,7 +371,7 @@ class TentativeDetailView(VueApprenant):
     )
     def patch(self, request, pk):
         donnees = _valider(TentativeActionSerializer, request.data)
-        tentative = get_object_or_404(Tentative.objects.select_related("exercice", "profil"), pk=pk)
+        tentative = _trouver(Tentative.objects.select_related("exercice", "profil"), pk, "tentative_id")
         action_ = donnees["action"]
         blocs = donnees.get("blocs")
         if action_ == "predire":
@@ -343,7 +401,7 @@ class CalibrageView(VueApprenant):
     )
     def post(self, request):
         donnees = _valider(ProfilRefSerializer, request.data)
-        profil = get_object_or_404(Profil, pk=donnees["profil_id"])
+        profil = _trouver(Profil, donnees["profil_id"], "profil_id")
         plan, changements = regles.appliquer_calibrage(profil)
         etats = regles.etats_carte(profil)
         return Response({

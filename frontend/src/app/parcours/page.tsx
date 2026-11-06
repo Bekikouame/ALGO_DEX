@@ -132,7 +132,7 @@ export default function MonEspace() {
           <MaProgression carte={cockpit.carte} debloquees={cockpit.notions_debloquees} recompenses={cockpit.recompenses.length} />
           <ProchaineEtape cockpit={cockpit} />
           <Motivation />
-          <CodeReprise code={cockpit.profil.code_reprise} />
+          <CodeReprise profilId={cockpit.profil.id} />
         </aside>
       </div>
     </Coque>
